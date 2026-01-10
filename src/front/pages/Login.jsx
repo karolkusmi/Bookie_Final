@@ -1,8 +1,9 @@
 import React, { useEffect } from "react"
+import { Link } from "react-router-dom";
 
 import useGlobalReducer from "../hooks/useGlobalReducer.jsx";
 
-export const Home = () => {
+export const Login = () => {
 
 	const { store, dispatch } = useGlobalReducer()
 
@@ -76,7 +77,7 @@ export const Home = () => {
 					</div>
 
 					<button type="submit" className="btn btn-primary w-100">Log in</button>
-					<button type="submit" className="btn btn-primary w-100 mt-2">Sign up</button>
+					<Link to="/signin" className="btn btn-primary w-100 mt-2">Sign up</Link>
 				</form>
 
 			</div>

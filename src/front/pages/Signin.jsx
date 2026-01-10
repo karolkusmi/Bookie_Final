@@ -1,12 +1,24 @@
+import { Link } from "react-router-dom";
+
 export const Signin = () => {
     return (
 
         <>
-            <h1>Sign In Page</h1>
+
             <div className="d-flex justify-content-center align-items-center vh-100">
                 <div className="card p-4" style={{ width: "350px" }}>
                     <form>
                         <h1 class="text-center">Sign In</h1>
+                        <div className="mb-3">
+                            <label htmlFor="exampleInputUsername" className="form-label">Username</label>
+                            <input
+                                type="text"
+                                className="form-control"
+                                id="exampleInputUsername"
+                                required
+                            />
+                        </div>
+
                         <div className="mb-3">
                             <label htmlFor="exampleInputEmail1" className="form-label">Email address</label>
                             <input
@@ -53,6 +65,7 @@ export const Signin = () => {
                         </div>
 
                         <button type="submit" className="btn btn-primary w-100 mt-2">Sign up</button>
+
                     </form>
 
                 </div>
