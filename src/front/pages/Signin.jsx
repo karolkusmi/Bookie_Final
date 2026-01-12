@@ -1,20 +1,60 @@
-import { Link } from "react-router-dom";
+import { use } from "react";
+import { useState } from "react";
+
+
 
 export const Signin = () => {
+
+
+
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState(null);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+            const response = await fetch(`${backendUrl}/api/signup`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    username
+                })
+            });
+
+            if (response.ok) {
+                window.location.href = "/login";
+            } else {
+                const errorData = await response.json();
+                setError(errorData.message);
+            }
+        } catch (error) {
+            setError("An error occurred during signup.");
+        }
+    };
+
     return (
 
         <>
 
             <div className="d-flex justify-content-center align-items-center vh-100">
                 <div className="card p-4" style={{ width: "350px" }}>
-                    <form>
+                    <form onSubmit={handleSubmit}>
                         <h1 class="text-center">Sign In</h1>
                         <div className="mb-3">
                             <label htmlFor="exampleInputUsername" className="form-label">Username</label>
                             <input
                                 type="text"
                                 className="form-control"
-                                id="exampleInputUsername"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
                                 required
                             />
                         </div>
@@ -24,7 +64,8 @@ export const Signin = () => {
                             <input
                                 type="email"
                                 className="form-control"
-                                id="exampleInputEmail1"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 aria-describedby="emailHelp"
                                 required
                             />
@@ -37,7 +78,8 @@ export const Signin = () => {
                             <input
                                 type="password"
                                 className="form-control"
-                                id="exampleInputPassword1"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                                 required
                             />
                         </div>

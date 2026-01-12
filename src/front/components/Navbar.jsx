@@ -20,6 +20,11 @@ export const Navbar = () => {
 						<button className="btn btn-primary">Aboutus</button>
 					</Link>
 				</div>
+				<div className="ml-auto">
+					<Link to="/home">
+						<button className="btn btn-primary">Home</button>
+					</Link>
+				</div>
 
 				<div className="ml-auto">
 					<Link to="/reset-password">

@@ -12,6 +12,7 @@ import { Demo } from "./pages/Demo";
 import { Signin } from "./pages/Signin";
 import { Aboutus } from "./pages/Aboutus";
 import { ResetPassword } from "./pages/ResetPassword";
+import { Home } from "./pages/Home";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -31,6 +32,7 @@ export const router = createBrowserRouter(
       <Route path="/signin" element={<Signin />} />
       <Route path="/aboutus" element={<Aboutus />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/home" element={<Home />} />
 
     </Route>
   )
