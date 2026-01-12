@@ -1,0 +1,14 @@
+:root {
+  --azul-oscuro: #231B59;
+  --azul-medio: #5DA4D9;
+  --azul-claro: #11DA3E7;
+  --granate-bookie: #730202;
+  --gris-fondo: #f5f5f4; /* El "Light Shell Gray" de tu foto */
+}
+
+/* Aplicamos el fondo a toda la web */
+body {
+  background-color: var(--gris-fondo);
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+}

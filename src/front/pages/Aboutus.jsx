@@ -24,8 +24,6 @@ export const Aboutus = () => {
                 </div>
 
             </section>
-
-
         </main>
     );
 }
