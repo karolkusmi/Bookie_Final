@@ -39,7 +39,7 @@ export const Login = () => {
 		<div className="d-flex justify-content-center align-items-center vh-100">
 			<div className="card p-4" style={{ width: "350px" }}>
 				<form>
-					<h1 class="text-center">Log In</h1>
+					<h1 className="text-center">Log In</h1>
 					<div className="mb-3">
 						<label htmlFor="exampleInputEmail1" className="form-label">Email address</label>
 						<input

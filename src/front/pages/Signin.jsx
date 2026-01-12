@@ -47,7 +47,7 @@ export const Signin = () => {
             <div className="d-flex justify-content-center align-items-center vh-100">
                 <div className="card p-4" style={{ width: "350px" }}>
                     <form onSubmit={handleSubmit}>
-                        <h1 class="text-center">Sign In</h1>
+                        <h1 className="text-center">Sign In</h1>
                         <div className="mb-3">
                             <label htmlFor="exampleInputUsername" className="form-label">Username</label>
                             <input

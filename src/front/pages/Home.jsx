@@ -2,6 +2,8 @@ import React from 'react';
 import './home.css';
 import portadaLibro from "../assets/img/portada_Libro.png";
 
+const events = [{ title: "Classic Novel Club", date: "May 25 • 6:00 PM", image: "icon-book.png" }, { title: "Sci‑Fi Readers Meetup", date: "May 28 • 7:30 PM", image: "icon-rocket-book.png" }, { title: "Author Talk: Elena Márquez", date: "June 2 • 5:00 PM", image: "icon-microphone.png" }, { title: "Silent Reading Party", date: "June 5 • 8:00 PM", image: "icon-coffee-book.png" }, { title: "Creative Writing Workshop", date: "June 10 • 4:00 PM", image: "icon-pencil.png" }, { title: "Book Swap Sunday", date: "June 15 • 11:00 AM", image: "icon-exchange.png" }];
+
 export const Home = () => {
     return (
         <div className="container-fluid py-4" style={{ backgroundColor: 'var(--book-bg)', minHeight: '100vh' }}>
@@ -63,21 +65,22 @@ export const Home = () => {
                         <button className="btn btn-outline-wine rounded-pill px-5 fw-bold">
                             Create Your Event
                         </button>
+                        <span className="p-2 rounded-5 btn-wine ms-3"> 📅</span>
                     </div>
 
                     <div className="d-flex justify-content-between align-items-center mb-4">
                         <h4 className="fw-bold">Upcoming Events</h4>
-                        <div className="p-2 rounded-3 btn-wine">📅</div>
+
                     </div>
 
                     <div className="row g-3">
-                        {[1, 2, 3, 4, 5, 6].map((ev) => (
-                            <div className="col-md-6" key={ev}>
+                        {events.map((ev, index) => (
+                            <div className="col-md-6" key={index}>
                                 <div className="card border-0 shadow-sm p-3 d-flex flex-row align-items-center" style={{ borderRadius: '15px' }}>
                                     <div className="rounded-circle p-3 me-3" style={{ backgroundColor: 'var(--book-lavender)' }}>📖</div>
                                     <div className="flex-grow-1 text-start">
-                                        <h6 className="fw-bold mb-0 small">Classic Novel Club</h6>
-                                        <p className="text-muted mb-0" style={{ fontSize: '0.7rem' }}>May 25 • 6:00 PM</p>
+                                        <h6 className="fw-bold mb-0 small">{ev.title}</h6>
+                                        <p className="text-muted mb-0" style={{ fontSize: '0.7rem' }}>{ev.date}</p>
                                     </div>
                                     <button className="btn btn-wine btn-sm rounded-pill px-3">View More</button>
                                 </div>
