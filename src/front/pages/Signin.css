@@ -1,0 +1,101 @@
+/* Contenedor específico para no afectar otras páginas */
+.signin-wrapper {
+    background-color: #f4f1ee; /* Fondo crema claro */
+    min-height: 100vh;
+}
+
+/* --- AJUSTE PARA EL LOGO TRANSPARENTE --- */
+.signin-wrapper .text-center.mb-4 img {
+    width: 180px !important;
+    height: auto;
+    /* Este comando mezcla los colores claros con el fondo crema, 
+       haciendo desaparecer los cuadritos grises y blancos */
+    mix-blend-mode: multiply; 
+    filter: contrast(110%); /* Opcional: da más fuerza al logo */
+}
+
+/* Tarjeta principal */
+.signin-wrapper .card {
+    border: none !important;
+    border-radius: 25px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+    padding: 2.5rem !important; /* Un poco más de aire */
+    width: 380px !important;
+    background-color: #ffffff;
+}
+
+/* Título Sign In */
+.signin-wrapper h1 {
+    color: #3b368c !important; /* Morado oscuro */
+    font-weight: 800 !important;
+    font-size: 2.5rem !important;
+    margin-bottom: 1.5rem !important;
+    letter-spacing: -1px;
+}
+
+/* Ocultar etiquetas para estilo moderno */
+.signin-wrapper .form-label {
+    display: none;
+}
+
+/* Campos de texto */
+.signin-wrapper .form-control {
+    background-color: #fcfcfc !important;
+    border: 1.5px solid #e8e8e8 !important;
+    border-radius: 12px !important;
+    padding: 14px 15px !important;
+    color: #3b368c !important;
+    margin-bottom: 10px;
+}
+
+.signin-wrapper .form-control:focus {
+    border-color: #7d73d1 !important;
+    box-shadow: 0 0 0 0.2rem rgba(125, 115, 209, 0.1) !important;
+}
+
+/* Checkboxes */
+.signin-wrapper .form-check-label {
+    color: #5d5a9d !important;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.signin-wrapper .form-check-input {
+    border-color: #7d73d1 !important;
+    cursor: pointer;
+}
+
+.signin-wrapper .form-check-input:checked {
+    background-color: #7d73d1 !important;
+    border-color: #7d73d1 !important;
+}
+
+/* Botón Sign Up */
+.signin-wrapper .btn-primary {
+    background-color: #7d73d1 !important;
+    border: none !important;
+    border-radius: 15px !important;
+    padding: 14px !important;
+    font-weight: bold !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+.signin-wrapper .btn-primary:hover {
+    background-color: #6a60bd !important;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(125, 115, 209, 0.3) !important;
+}
+
+/* Alerta de error */
+.signin-wrapper .alert-danger {
+    border-radius: 12px;
+    font-size: 0.85rem;
+    padding: 12px;
+    border: none;
+    background-color: #ffe5e5;
+    color: #d9534f;
+}

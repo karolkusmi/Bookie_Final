@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-
+import "./Signin.css";
 
 export const Signin = () => {
     const [formData, setFormData] = useState({
@@ -116,9 +116,14 @@ export const Signin = () => {
     return (
 
         <>
+            <div className="signin-wrapper d-flex flex-column justify-content-center align-items-center vh-100">
+                {/*Foto logo  */}
+                <div className="text-center mb-4">
+                </div>
 
-            <div className="d-flex justify-content-center align-items-center vh-100">
-                <div className="card p-4" style={{ width: "350px" }}>
+                <div className="card p-4" style={{ width: "400px" }}>
+
+
                     <form onSubmit={handleSubmit}>
                         <h1 className="text-center">Sign In</h1>
                         <div className="mb-3">
