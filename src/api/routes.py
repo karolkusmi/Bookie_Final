@@ -36,26 +36,30 @@ def handle_hello():
 @api.route("/signup", methods=["POST"])
 def signup():
     data = request.get_json()
+
+    username = data.get("username") 
     email = data.get("email")
     password = data.get("password")
 
-    if not email or not password:
-        return jsonify({"message": "Email and password are required"}), 400
+    if not username or not email or not password:
+        return jsonify({"message": "Username, email and password are required"}), 400
 
-    if User.query.filter_by(email=email).first():
+    if User.query.filter(
+        (User.email==email) & (User.username == username)
+        ).first():
         return jsonify({"message": "User already exists"}), 409
+    
+    user = User(username=username, email=email, is_active=True)
+    user.set_password(password)
 
-    new_user = User(email=email)
-    new_user.set_password(password)
-
-    db.session.add(new_user)
+    db.session.add(user)
     db.session.commit()
 
-    return jsonify(new_user.serialize()), 201
+    return jsonify(user.serialize()), 201
 
 @api.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
+    data = request.get_json() or {}
     email = data.get("email")
     password = data.get("password")
 

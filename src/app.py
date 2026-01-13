@@ -15,8 +15,8 @@ from api.commands import setup_commands
 
 # from models import Person
 ENV = "development" if os.getenv("FLASK_DEBUG") == "1" else "production"
-static_file_dir = os.path.join(os.path.dirname(
-    os.path.realpath(__file__)), '../dist/')
+static_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../dist/')
+
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "dev-secret-key")
 app.url_map.strict_slashes = False
@@ -33,8 +33,13 @@ if database_url:
 else:
     # Fallback a SQLite para desarrollo local si no hay DATABASE_URL
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///test.db"
+  
+  
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
 
 db.init_app(app)
+MIGRATE = Migrate(app, db)
 
 # add the admin
 setup_admin(app)
