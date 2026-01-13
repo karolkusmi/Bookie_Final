@@ -23,6 +23,17 @@ app.url_map.strict_slashes = False
 
 # database condiguration
 
+database_url = os.getenv("DATABASE_URL")
+if database_url:
+    # Si DATABASE_URL empieza con "postgres://", cambiarlo a "postgresql://"
+    # (SQLAlchemy requiere postgresql://, no postgres://)
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+else:
+    # Fallback a SQLite para desarrollo local si no hay DATABASE_URL
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///test.db"
+
 db.init_app(app)
 
 # add the admin
