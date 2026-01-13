@@ -13,6 +13,7 @@ import { Signin } from "./pages/Signin";
 import { Aboutus } from "./pages/Aboutus";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Home } from "./pages/Home";
+import { Chat1 } from "./pages/Chat1";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -33,6 +34,7 @@ export const router = createBrowserRouter(
       <Route path="/aboutus" element={<Aboutus />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/home" element={<Home />} />
+      <Route path="/chat" element={<Chat1 />} />
 
     </Route>
   )

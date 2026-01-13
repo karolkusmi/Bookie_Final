@@ -1,6 +1,10 @@
 import React from 'react';
 import './home.css';
 import portadaLibro from "../assets/img/portada_Libro.png";
+import { Link } from 'react-router-dom';
+
+
+
 
 const events = [{ title: "Classic Novel Club", date: "May 25 • 6:00 PM", image: "icon-book.png" }, { title: "Sci‑Fi Readers Meetup", date: "May 28 • 7:30 PM", image: "icon-rocket-book.png" }, { title: "Author Talk: Elena Márquez", date: "June 2 • 5:00 PM", image: "icon-microphone.png" }, { title: "Silent Reading Party", date: "June 5 • 8:00 PM", image: "icon-coffee-book.png" }, { title: "Creative Writing Workshop", date: "June 10 • 4:00 PM", image: "icon-pencil.png" }, { title: "Book Swap Sunday", date: "June 15 • 11:00 AM", image: "icon-exchange.png" }];
 
@@ -26,13 +30,42 @@ export const Home = () => {
                             {/* Tarjeta Social */}
                             <div className="card border-0 shadow-sm p-4 flex-grow-1" style={{ borderRadius: 'var(--card-radius)' }}>
                                 <h6 className="fw-bold">Like-minded readers</h6>
+
                                 <div className="d-flex my-2">
-                                    <div className="bg-secondary rounded-circle border border-white" style={{ width: '30px', height: '30px' }}></div>
-                                    <div className="bg-secondary rounded-circle border border-white" style={{ width: '30px', height: '30px', marginLeft: '-10px' }}></div>
+                                    <img
+                                        src="https://i.pravatar.cc/150?img=47"
+                                        alt="reader avatar"
+                                        className="rounded-circle border border-white"
+                                        style={{
+                                            width: "30px",
+                                            height: "30px",
+                                            objectFit: "cover"
+                                        }}
+                                    />
+
+                                    <img
+                                        src="https://i.pravatar.cc/150?img=12"
+                                        alt="reader avatar"
+                                        className="rounded-circle border border-white"
+                                        style={{
+                                            width: "30px",
+                                            height: "30px",
+                                            marginLeft: "-10px",
+                                            objectFit: "cover"
+                                        }}
+                                    />
                                 </div>
+
+                                {/* Chat aquí */}
                                 <p className="small text-muted">"Aure and 12 others are here."</p>
-                                <button className="btn btn-wine w-100 py-2 mt-auto rounded-3">View More</button>
+
+                                <Link to="/chat">
+                                    <button className="btn btn-wine w-100 py-2 mt-auto rounded-3">
+                                        Open Chat
+                                    </button>
+                                </Link>
                             </div>
+
                         </div>
                     </section>
 

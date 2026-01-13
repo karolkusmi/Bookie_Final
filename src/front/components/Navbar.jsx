@@ -32,6 +32,12 @@ export const Navbar = () => {
 					</Link>
 				</div>
 
+				<div className="ml-auto">
+					<Link to="/chat">
+						<button className="btn btn-primary">Chat</button>
+					</Link>
+				</div>
+
 			</div>
 		</nav>
 	);

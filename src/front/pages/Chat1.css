@@ -1,0 +1,67 @@
+.page-layout {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    background-color: #f4f4f2; /* Color gris claro de fondo */
+    overflow: hidden;
+}
+
+.sidebar {
+    width: 300px;
+    background-color: #E5E4E2; /* Light Shell Gray */
+    border-right: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    padding: 30px 20px;
+    gap: 40px;
+}
+
+.chat-main {
+    flex: 1; /* El chat ocupa todo el resto del espacio */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+
+.book-section {
+    text-align: center;
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.book-cover {
+    width: 120px;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.book-title {
+    font-weight: bold;
+    color: #231B59;
+}
+
+
+.avatar-group {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid white;
+    margin-left: -10px; 
+}
+
+.avatar:first-child { margin-left: 0; }
+
+.readers-count {
+    font-size: 0.85rem;
+    color: #666;
+}
