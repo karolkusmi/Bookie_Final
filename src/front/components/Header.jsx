@@ -19,7 +19,7 @@ export const Header = () => {
                 <span style={{ fontSize: "1.3rem", cursor: "pointer" }}>🔔</span>
 
                 <div className="user-profile-section">
-                    <span className="user-name">Aure</span>
+                    <span className="user-name">Lola</span>
                     <div className="profile-circle">
                         <img
                             src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80"
