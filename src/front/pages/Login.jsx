@@ -1,44 +1,70 @@
-import React, { useEffect } from "react"
-import { Link } from "react-router-dom";
-
-import useGlobalReducer from "../hooks/useGlobalReducer.jsx";
+import { useState, useEffect } from "react"
+import { useNavigate, Link } from "react-router-dom";
 
 export const Login = () => {
 
-	const { store, dispatch } = useGlobalReducer()
+	const [formData, setFormData] = useState({
+		email: "",
+		password: ""
+	});
+	const [error, setError] = useState(null);
+	const [loading, setLoading] = useState(false);
+	const navigate = useNavigate();
 
-	const loadMessage = async () => {
+
+	const handleChange = (e) => {
+		setFormData({ ...formData, [e.target.name]: e.target.value });
+	};
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+
 		try {
-			const backendUrl = import.meta.env.VITE_BACKEND_URL
+			const backendUrl = import.meta.env.VITE_BACKEND_URL;
+			setLoading(true);
+			setError(null);
+			if (!backendUrl) {
+				setError("Backend URL is not configured. Please set VITE_BACKEND_URL in your .env file.");
+				return;
+			}
+			const response = await fetch(`${backendUrl}/api/login`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"Accept": "application/json"
+				},
+				body: JSON.stringify(formData),
+				mode: "cors",
+				credentials: "omit"
+			});
 
-			if (!backendUrl) throw new Error("VITE_BACKEND_URL is not defined in .env file")
+			if (!response.ok) {
+				setError("Failed to login. Please check your credentials.");
+				setLoading(false);
+				return;
+			}
 
-			const response = await fetch(backendUrl + "/api/hello")
-			const data = await response.json()
-
-			if (response.ok) dispatch({ type: "set_hello", payload: data.message })
-
-			return data
-
+			const data = await response.json();
+			console.log("Login successful:", data);
+			setLoading(false);
+			navigate("/home");
 		} catch (error) {
-			if (error.message) throw new Error(
-				`Could not fetch the message from the backend.
-				Please check if the backend is running and the backend port is public.`
-			);
+			console.error("Login error:", error);
+			setError("Failed to login. Please check your credentials.");
+			setLoading(false);
 		}
-
 	}
 
-	useEffect(() => {
-		loadMessage()
-	}, [])
+
+
+
 
 	return (
 
 
 		<div className="d-flex justify-content-center align-items-center vh-100">
 			<div className="card p-4" style={{ width: "350px" }}>
-				<form>
+				<form onSubmit={handleSubmit}>
 					<h1 className="text-center">Log In</h1>
 					<div className="mb-3">
 						<label htmlFor="exampleInputEmail1" className="form-label">Email address</label>
@@ -48,6 +74,9 @@ export const Login = () => {
 							id="exampleInputEmail1"
 							aria-describedby="emailHelp"
 							required
+							name="email"
+							value={formData.email}
+							onChange={handleChange}
 						/>
 						<div id="emailHelp" className="form-text">
 						</div>
@@ -59,6 +88,9 @@ export const Login = () => {
 							type="password"
 							className="form-control"
 							id="exampleInputPassword1"
+							name="password"
+							value={formData.password}
+							onChange={handleChange}
 							required
 						/>
 					</div>
@@ -68,6 +100,7 @@ export const Login = () => {
 							type="checkbox"
 							className="form-check-input"
 							id="exampleCheck1"
+							name="remember_me"
 						/>
 
 						<label className="form-check-label" htmlFor="exampleCheck1">
@@ -83,5 +116,5 @@ export const Login = () => {
 			</div>
 		</div>
 
-	);
-}; 
+	)
+};

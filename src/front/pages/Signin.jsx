@@ -1,8 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import "./auth.css"
-
-
 
 
 export const Signin = () => {
@@ -14,9 +11,6 @@ export const Signin = () => {
         suscribed_letter: false,
         is_active: true
     });
-
-
-
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -29,12 +23,10 @@ export const Signin = () => {
         });
     };
 
-
-
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-
+        // Validación básica del formulario
         if (!formData.username || !formData.email || !formData.password) {
             setError("Please fill in all required fields.");
             return;
@@ -63,20 +55,20 @@ export const Signin = () => {
                     "Accept": "application/json"
                 },
                 body: JSON.stringify(formData),
-
+                // Agregar mode y credentials para mejor manejo de CORS
                 mode: "cors",
                 credentials: "omit"
             });
 
-
+            // Verificar si la respuesta es OK antes de intentar parsear JSON
             if (!response.ok) {
-
+                // Intentar obtener el mensaje de error del servidor
                 let errorMessage = `Server error: ${response.status} ${response.statusText}`;
                 try {
                     const errorData = await response.json();
                     errorMessage = errorData.message || errorMessage;
                 } catch (parseError) {
-
+                    // Si no se puede parsear JSON, usar el mensaje por defecto
                     console.warn("Could not parse error response:", parseError);
                 }
                 setError(errorMessage);
@@ -84,14 +76,14 @@ export const Signin = () => {
                 return;
             }
 
-
+            // Si todo está bien, parsear la respuesta y navegar
             try {
                 const data = await response.json();
                 console.log("Signup successful:", data);
                 setLoading(false);
                 navigate("/login");
             } catch (parseError) {
-
+                // Si la respuesta está vacía pero el status es OK, asumir éxito
                 console.warn("Empty response, assuming success:", parseError);
                 setLoading(false);
                 navigate("/login");
@@ -100,7 +92,7 @@ export const Signin = () => {
         } catch (error) {
             console.error("Signup error:", error);
 
-
+            // Manejo específico de errores de red/CORS
             let errorMessage = "An error occurred during signup. Please check your connection.";
 
             if (error.name === "TypeError" && error.message.includes("Failed to fetch")) {
@@ -121,7 +113,6 @@ export const Signin = () => {
         }
     };
 
-
     return (
 
         <>
@@ -135,6 +126,7 @@ export const Signin = () => {
                             <input
                                 type="text"
                                 className="form-control"
+                                name="username"
                                 value={formData.username}
                                 onChange={handleChange}
                                 required
@@ -146,6 +138,7 @@ export const Signin = () => {
                             <input
                                 type="email"
                                 className="form-control"
+                                name="email"
                                 value={formData.email}
                                 onChange={handleChange}
                                 aria-describedby="emailHelp"
@@ -159,6 +152,7 @@ export const Signin = () => {
                             <label htmlFor="exampleInputPassword1" className="form-label">Password</label>
                             <input
                                 type="password"
+                                name="password"
                                 className="form-control"
                                 value={formData.password}
                                 onChange={handleChange}
@@ -170,7 +164,10 @@ export const Signin = () => {
                             <input
                                 type="checkbox"
                                 className="form-check-input"
+                                name="accepted_term"
                                 id="exampleCheck1"
+                                checked={formData.accepted_term}
+                                onChange={handleChange}
                             />
 
                             <label className="form-check-label" htmlFor="exampleCheck1">
@@ -181,6 +178,7 @@ export const Signin = () => {
                             <input
                                 type="checkbox"
                                 className="form-check-input"
+                                name="suscribed_letter"
                                 id="exampleCheck2"
                                 checked={formData.suscribed_letter}
                                 onChange={handleChange}
@@ -195,7 +193,6 @@ export const Signin = () => {
                                 {error}
                             </div>
                         )}
-
                         <button
                             type="submit"
                             className="btn btn-primary w-100 mt-2"
