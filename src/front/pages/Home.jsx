@@ -5,17 +5,18 @@ import portadaLibro from "../assets/img/portada_Libro.png";
 import { Link } from 'react-router-dom';
 
 
-const [eventList, setEventList] = useState([
-    { title: "Classic Novel Club", date: "May 25 • 6:00 PM", icon: "📖" },
-    { title: "Sci‑Fi Readers Meetup", date: "May 28 • 7:30 PM", icon: "🚀" },
-    { title: "Author Talk: Elena Márquez", date: "June 2 • 5:00 PM", icon: "🎤" },
-    { title: "Silent Reading Party", date: "June 5 • 8:00 PM", icon: "☕" },
-    { title: "Creative Writing Workshop", date: "June 10 • 4:00 PM", icon: "📝" },
-    { title: "Book Swap Sunday", date: "June 15 • 11:00 AM", icon: "🔄" }
-]);
 
 export const Home = () => {
 
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [eventList, setEventList] = useState([
+        { title: "Classic Novel Club", date: "May 25 • 6:00 PM", icon: "📖" },
+        { title: "Sci‑Fi Readers Meetup", date: "May 28 • 7:30 PM", icon: "🚀" },
+        { title: "Author Talk: Elena Márquez", date: "June 2 • 5:00 PM", icon: "🎤" },
+        { title: "Silent Reading Party", date: "June 5 • 8:00 PM", icon: "☕" },
+        { title: "Creative Writing Workshop", date: "June 10 • 4:00 PM", icon: "📝" },
+        { title: "Book Swap Sunday", date: "June 15 • 11:00 AM", icon: "🔄" }
+    ]);
     const handleAddEvent = (newEvent) => {
         setEventList([newEvent, ...eventList]);
     };
