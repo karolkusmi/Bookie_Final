@@ -1,62 +1,67 @@
 .wrapper_aboutus {
-    background-color: #E5E4E2; 
-    height: 100vh;
-    width: 100vw;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-family: 'Arial', sans-serif; 
-    color: #231B59; 
-    
+  background-color: #e5e4e2;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Arial", sans-serif;
+  color: #231b59;
 }
 .aboutus_content {
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: space-evenly;
-height: 90%;
-width: 90%;
-max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  height: 90%;
+  width: 90%;
+  max-width: 1200px;
 }
 
 .text_aboutus_title {
-    color: #231B59;
-    font-weight: bold;
-    font-size: 3rem;
-    margin-bottom: 20px;    
+  color: #231b59;
+  font-weight: bold;
+  font-size: 3rem;
+  margin-bottom: 20px;
 }
 .content-row p {
-    font-size: 1.2rem;
-    line-height: 1.6;
-    margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .book-img {
-    max-width: 15vw;
-    height: auto;
+  max-width: 15vw;
+  height: auto;
 }
 
 .logo-container img {
-    max-height: 20vh;
-    width: auto;
+  max-height: 20vh;
+  width: auto;
 }
 .main-info-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 2rem;
-    width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  width: 100%;
 }
 
 @keyframes flotar {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
-    100% { transform: translateY(0px); }
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
 }
 .imagen-animada {
-    animation: flotar 3s ease-in-out infinite;
+  animation: flotar 3s ease-in-out infinite;
 }
-.retraso{
-    animation-delay: 1.5s;
+.retraso {
+  animation-delay: 1.5s;
 }

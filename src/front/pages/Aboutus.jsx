@@ -1,5 +1,6 @@
+import React from "react";
 import "./Aboutus.css";
-
+//import PixelCard from "../components/PixelCard";//
 import logoBookie from "../assets/img/Aboutus_img/logo_bookie.png";
 import libroIzq from "../assets/img/Aboutus_img/libro_izq.png";
 import libroDer from "../assets/img/Aboutus_img/libro_der.png";
@@ -31,13 +32,16 @@ export const Aboutus = () => {
                         className="book-img imagen-animada"
                     />
 
-                    <p>
-                        <strong>Connecting hearts through shared stories.</strong><br />
-                        Bookie is where lovers find their perfect match. Swipe through,
-                        discover users based on your favorite books and genres,
-                        and start meaningful conversations that go beyond the cover.
-                        Find your <strong>next chapter with Bookie!</strong>
-                    </p>
+                    <div className="text-container">
+                        <p>
+                            <strong>Connecting hearts through shared stories.</strong><br />
+                            Bookie is where lovers find their perfect match. Swipe through,
+                            discover users based on your favorite books and genres,
+                            and start meaningful conversations that go beyond the cover.
+                            Find your <strong>next chapter with Bookie!</strong>
+                        </p>
+                    </div>
+
 
                     <img
                         src={libroDer}

@@ -18,6 +18,7 @@ import { Aboutus } from "./pages/Aboutus";
 import { Demo } from "./pages/Demo";
 import { Single } from "./pages/Single";
 import { ResetPassword } from "./pages/ResetPassword";
+import { Profile } from "./pages/Profile";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -36,6 +37,7 @@ export const router = createBrowserRouter(
         <Route path="/aboutus" element={<Aboutus />} />
         <Route path="/demo" element={<Demo />} />
         <Route path="/single/:theId" element={<Single />} />
+        <Route path="/profile" element={<Profile />} />
       </Route>
 
       {/* 3. RUTA CON SOLO HEADER (Chat) */}
