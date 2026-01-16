@@ -5,7 +5,7 @@ This module takes care of starting the API Server, Loading the DB and Adding the
 from flask import Flask, request, jsonify, url_for, Blueprint
 import flask
 import jwt
-from api.models import db, User
+from api.models import Event, db, User
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
 import jwt
@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 from flask import current_app
 from flask import request, jsonify
 import requests
+
+
 
 api = Blueprint('api', __name__)
 
@@ -139,3 +141,103 @@ def books_search():
         })
 
     return jsonify({"totalItems": data.get("totalItems", 0), "items": normalized}), 200
+
+#routes for user events
+
+@api.route("/users/<int:user_id>/events", methods=["GET"])
+def get_user_events(user_id):
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    events = user.events
+
+    return jsonify([event.serialize() for event in events]), 200
+
+@api.route("/events", methods=["POST"])
+def create_event():
+    data = request.get_json() or {}
+
+    title = data.get("title")
+    date_str = data.get("date")      
+    time_str = data.get("time")      
+    category = data.get("category")  
+    location = data.get("location")  
+
+    if not all([title, date_str, time_str, category, location]):
+        return jsonify({"msg": "Missing fields"}), 400
+
+    try:
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+        time_obj = datetime.strptime(time_str, "%H:%M").time()
+    except ValueError:
+        return jsonify({"msg": "Invalid date/time format"}), 400
+
+    event = Event(
+        title=title,
+        date=date_obj,
+        time=time_obj,
+        category=category,
+        location=location
+    )
+
+    db.session.add(event)
+    db.session.commit()
+
+    return jsonify(event.serialize()), 201
+
+@api.route("/events/<int:event_id>/signup", methods=["POST"])
+def singup_to_event(event_id):
+    data = request.get_json() or {}
+    user_id = data.get("user_id")
+
+    if not user_id:
+        return jsonify({"msg": "Missing user_id"}), 400
+
+    user = User.query.get(user_id)
+    event = Event.query.get(event_id)
+
+    if not user or not event:
+        return jsonify({"msg": "User or Event not found"}), 404
+    
+    if event in user.events:
+        return jsonify({"msg": "User already signed up to this event"}), 409
+
+    user.events.append(event)
+    db.session.commit()
+
+    return jsonify({"msg": "User signed up to event"}), 200
+
+@api.route("/events/<int:event_id>/signup", methods=["DELETE"])
+def unsingup_from_event(event_id):
+    data = request.get_json() or {}
+    user_id = data.get("user_id")
+
+    if not user_id:
+        return jsonify({"msg": "Missing user_id"}), 400
+
+    user = User.query.get(user_id)
+    event = Event.query.get(event_id)
+
+    if not user or not event:
+        return jsonify({"msg": "User or Event not found"}), 404
+    
+    if event not in user.events:
+        return jsonify({"msg": "User not signed up to this event"}), 409
+
+    user.events.remove(event)
+    db.session.commit()
+
+    return jsonify({"msg": "User unsigned from event"}), 200
+
+@api.route("/events/<int:event_id>/users", methods=["GET"])
+def get_event_users(event_id):
+    event = Event.query.get(event_id)
+
+    if not event:
+        return jsonify({"msg": "Event not found"}), 404
+
+    users = event.users
+
+    return jsonify([user.serialize() for user in users]), 200
