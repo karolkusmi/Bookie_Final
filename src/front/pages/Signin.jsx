@@ -26,7 +26,6 @@ export const Signin = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         // Validación básica del formulario
         if (!formData.username || !formData.email || !formData.password) {
             setError("Please fill in all required fields.");
@@ -49,16 +48,13 @@ export const Signin = () => {
             setLoading(true);
             setError(null);
 
-            const response = await fetch(`${backendUrl}/api/signup`, {
+            const response = await fetch(`${backendUrl}/auth/signup`, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
+                    "Content-Type": "application/json"
                 },
-                body: JSON.stringify(formData),
-                // Agregar mode y credentials para mejor manejo de CORS
-                mode: "cors",
-                credentials: "omit"
+                credentials: 'include', // Necesario para enviar/recibir cookies
+                body: JSON.stringify(formData)
             });
 
             // Verificar si la respuesta es OK antes de intentar parsear JSON
@@ -82,7 +78,7 @@ export const Signin = () => {
                 const data = await response.json();
                 console.log("Signup successful:", data);
                 setLoading(false);
-                navigate("/home");
+                navigate("/");
             } catch (parseError) {
                 // Si la respuesta está vacía pero el status es OK, asumir éxito
                 console.warn("Empty response, assuming success:", parseError);
@@ -108,7 +104,6 @@ export const Signin = () => {
             } else if (error.message) {
                 errorMessage = error.message;
             }
-
             setError(errorMessage);
             setLoading(false);
         }

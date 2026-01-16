@@ -3,6 +3,12 @@
   --book-wine: #8b1a30;
   --book-lavender: #e2e1ff;
   --card-radius: 20px;
+  --main-bg: #e8e8e8;
+}
+
+body {
+  background-color: var(--main-bg);
+  min-height: 100vh;
 }
 
 .card-bookie {
@@ -76,12 +82,14 @@
 .header-icon-svg:hover {
   color: #8b1a1a;
 }
+
 .header-icon-svg {
   width: 24px;
   height: 24px;
   color: #5a3e3e;
   transition: color 0.2s;
 }
+
 .header-icon-link,
 .header-icon-btn {
   background: none;
@@ -91,4 +99,121 @@
   align-items: center;
   cursor: pointer;
   text-decoration: none;
+}
+
+.left-container {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  height: 100%;
+}
+
+.right-container {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  height: 100%;
+}
+
+.main-row {
+  gap: 2rem;
+}
+
+.card-shadow {
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+  transition: box-shadow 0.3s ease;
+  &:hover {
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(139, 26, 48, 0.15);
+}
+
+.event-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.event-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(139, 26, 48, 0.12);
+}
+
+.bg-lavender-card {
+  background: linear-gradient(135deg, #d1cffd 0%, #e2e1ff 100%) !important;
+  transition: transform 0.3s ease;
+}
+
+.bg-lavender-card:hover {
+  transform: translateY(-5px);
+}
+
+.btn-wine,
+.btn-outline-wine {
+  transition: all 0.3s ease;
+}
+
+.btn-wine:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 15px rgba(139, 26, 48, 0.2);
+}
+
+.btn-outline-wine:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(139, 26, 48, 0.2);
+}
+
+@media (max-width: 768px) {
+  .left-container,
+  .right-container {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .main-row {
+    gap: 1rem;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card {
+  animation: fadeInUp 0.5s ease forwards;
+}
+
+.card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.card:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.card:nth-child(4) {
+  animation-delay: 0.4s;
+}
+.card:nth-child(5) {
+  animation-delay: 0.5s;
+}
+.card:nth-child(6) {
+  animation-delay: 0.6s;
 }

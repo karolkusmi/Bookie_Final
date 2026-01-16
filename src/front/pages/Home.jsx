@@ -3,32 +3,28 @@ import CreateEventModal from '../components/CreateEventModal';
 import './Home.css';
 import portadaLibro from "../assets/img/portada_Libro.png";
 import { Link } from 'react-router-dom';
-
-
+import useGlobalReducer from '../hooks/useGlobalReducer';
 
 export const Home = () => {
-
+    const { store, dispatch } = useGlobalReducer();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [eventList, setEventList] = useState([
-        { title: "Classic Novel Club", date: "May 25 • 6:00 PM", icon: "📖" },
-        { title: "Sci‑Fi Readers Meetup", date: "May 28 • 7:30 PM", icon: "🚀" },
-        { title: "Author Talk: Elena Márquez", date: "June 2 • 5:00 PM", icon: "🎤" },
-        { title: "Silent Reading Party", date: "June 5 • 8:00 PM", icon: "☕" },
-        { title: "Creative Writing Workshop", date: "June 10 • 4:00 PM", icon: "📝" },
-        { title: "Book Swap Sunday", date: "June 15 • 11:00 AM", icon: "🔄" }
-    ]);
+    const [eventList, setEventList] = useState(store.initialEventList);
     const handleAddEvent = (newEvent) => {
-        setEventList([newEvent, ...eventList]);
+        dispatch({
+            type: 'add_event',
+            payload: newEvent
+        });
     };
 
     return (
-        <div className="container-fluid py-4" style={{ backgroundColor: 'var(--book-bg)', minHeight: '100vh' }}>
-            <div className="row g-4">
+
+        <div className="container-fluid d-flex justify-content-center align-items-center" style={{ backgroundColor: 'var(--book-bg)', minHeight: "90%" }}>
+            <div className="row gap-3 mx-5">
 
                 {/* COLUMNA IZQUIERDA */}
-                <div className="col-12 col-xl-5">
+                <div className="card-shadow col-5 left-container">
                     <section className="mb-5">
-                        <h5 className="fw-bold mb-4">READING NOW</h5>
+                        <h5 className="fw-bold mb-4 glitch-title" data-text="READING NOW">READING NOW</h5>
                         <div className="d-flex gap-3 flex-wrap">
 
                             {/* Tarjeta Libro */}
@@ -36,7 +32,7 @@ export const Home = () => {
                                 <div className="book-card-img shadow-sm">
                                     <img src={portadaLibro} alt="Book cover" className="w-100 h-100 object-fit-cover" />
                                 </div>
-                                <span className="fw-bold small">Your Book</span>
+                                <span className="fw-bold small">Your Book !!</span>
                             </div>
 
                             {/* Tarjeta Social */}
@@ -82,7 +78,7 @@ export const Home = () => {
                     </section>
 
                     <section>
-                        <h5 className="fw-bold mb-4">ACTIVITY FEED</h5>
+                        <h5 className="fw-bold mb-4 glitch-title" data-text="ACTIVITY FEED">ACTIVITY FEED</h5>
                         <div className="d-flex gap-3">
                             <div className="card border-0 p-4 text-center shadow-sm flex-grow-1 bg-lavender-card" style={{ borderRadius: 'var(--card-radius)' }}>
                                 <span className="fs-1">📅</span>
@@ -105,36 +101,50 @@ export const Home = () => {
                 </div>
 
                 {/* COLUMNA DERECHA */}
-                <div className="col-12 col-xl-7 border-start-xl">
+                <div className="card-shadow col-6 right-container">
                     <div className="d-flex justify-content-center mb-5">
                         <button className="btn btn-outline-wine rounded-pill px-5 fw-bold" onClick={() => setIsModalOpen(true)}>
                             ✚ Create Your Event
                         </button>
-
                     </div>
 
                     <div className="d-flex justify-content-between align-items-center mb-4">
                         <h4 className="fw-bold"> Upcoming Events</h4>
-
                     </div>
 
                     <div className="row g-3">
                         {/* 3. Mapeamos el ESTADO eventList */}
-                        {eventList.map((ev, index) => (
-                            <div className="col-md-6" key={index}>
-                                <div className="card border-0 shadow-sm p-3 d-flex flex-row align-items-center" style={{ borderRadius: '15px' }}>
-                                    {/* Aquí mostramos el icono dinámico */}
-                                    <div className="rounded-circle p-3 me-3 fs-4" style={{ backgroundColor: 'var(--book-lavender)' }}>
-                                        {ev.icon}
+                        {
+                            store.eventGlobalList.length === 0 ? eventList.map((ev, index) => (
+                                <div className="col-md-6" key={index}>
+                                    <div className="card border-0 shadow-sm p-3 d-flex flex-row align-items-center  event-card" style={{ borderRadius: '15px' }}>
+                                        {/* Aquí mostramos el icono dinámico */}
+                                        <div className="rounded-circle p-3 me-3 fs-4" style={{ backgroundColor: 'var(--book-lavender)' }}>
+                                            {ev.icon}
+                                        </div>
+                                        <div className="flex-grow-1 text-start">
+                                            <h6 className="fw-bold mb-0 small">{ev.title}</h6>
+                                            <p className="text-muted mb-0" style={{ fontSize: '0.7rem' }}>{ev.date}</p>
+                                        </div>
+                                        <button className="btn btn-wine btn-sm rounded-pill px-3">View More</button>
                                     </div>
-                                    <div className="flex-grow-1 text-start">
-                                        <h6 className="fw-bold mb-0 small">{ev.title}</h6>
-                                        <p className="text-muted mb-0" style={{ fontSize: '0.7rem' }}>{ev.date}</p>
-                                    </div>
-                                    <button className="btn btn-wine btn-sm rounded-pill px-3">View More</button>
                                 </div>
-                            </div>
-                        ))}
+                            )) :
+                                store.eventGlobalList.map((ev, index) => (
+                                    <div className="col-md-6" key={index}>
+                                        <div className="card border-0 shadow-sm p-3 d-flex flex-row align-items-center  event-card" style={{ borderRadius: '15px' }}>
+                                            {/* Aquí mostramos el icono dinámico */}
+                                            <div className="rounded-circle p-3 me-3 fs-4" style={{ backgroundColor: 'var(--book-lavender)' }}>
+                                                {ev.icon}
+                                            </div>
+                                            <div className="flex-grow-1 text-start">
+                                                <h6 className="fw-bold mb-0 small">{ev.title}</h6>
+                                                <p className="text-muted mb-0" style={{ fontSize: '0.7rem' }}>{ev.date}</p>
+                                            </div>
+                                            <button className="btn btn-wine btn-sm rounded-pill px-3">View More</button>
+                                        </div>
+                                    </div>
+                                ))}
                     </div>
 
                     <Link to="/" className="btn btn-outline-wine rounded-pill px-4 fw-bold ms-3 mt-4">

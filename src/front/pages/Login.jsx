@@ -25,29 +25,32 @@ export const Login = () => {
 			const backendUrl = import.meta.env.VITE_BACKEND_URL;
 			setLoading(true);
 			setError(null);
+
 			if (!backendUrl) {
 				setError("Backend URL is not configured. Please set VITE_BACKEND_URL in your .env file.");
+				setLoading(false);
 				return;
 			}
-			const response = await fetch(`${backendUrl}/api/login`, {
+
+			const response = await fetch(`${backendUrl}/auth/login`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					"Accept": "application/json"
 				},
 				body: JSON.stringify(formData),
-				mode: "cors",
-				credentials: "omit"
+				credentials: 'include',
 			});
 
 			if (!response.ok) {
-				setError("Failed to login. Please check your credentials.");
+				const errorData = await response.json().catch(() => ({}));
+				setError(errorData.message || "Failed to login. Please check your credentials.");
 				setLoading(false);
 				return;
 			}
 
 			const data = await response.json();
-			console.log("Login successful:", data);
+			localStorage.setItem('access_token', data.access_token);
+			localStorage.setItem('refresh_token', data.refresh_token);
 			setLoading(false);
 			navigate("/home");
 		} catch (error) {
@@ -56,9 +59,6 @@ export const Login = () => {
 			setLoading(false);
 		}
 	}
-
-
-
 
 
 	return (
