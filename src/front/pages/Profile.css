@@ -1,0 +1,54 @@
+.profile-main-container {
+    display: flex;
+    background-color: #E5E4D7; /* Light Shell Gray */
+    min-height: 100vh;
+}
+
+.profile-content {
+    flex-grow: 1;
+    padding: 40px;
+    /* Esto evita que el contenido se meta debajo del Navbar */
+    margin-left: 10px; 
+}
+
+.profile-card {
+    background-color: #ffffff;
+    border-radius: 20px;
+    padding: 35px;
+    border: none;
+}
+
+.profile-avatar-img {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 5px solid #ffffff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.btn-edit-profile {
+    background-color: #730202; /* Rojo Granate */
+    color: white;
+    border: none;
+    padding: 10px 30px;
+    border-radius: 30px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.genre-pill {
+    background-color: #E5E4D7;
+    color: #231B59; /* Azul Medianoche */
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+.book-cover-profile {
+    width: 180px;
+    border-radius: 10px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
