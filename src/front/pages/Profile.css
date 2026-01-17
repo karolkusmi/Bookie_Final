@@ -1,0 +1,29 @@
+:root {
+    --book-midnight: #231B59;
+    --book-wine: #730202;
+    --book-lavender: #11DA3E7;
+    --book-bg: #E5E4D7;
+}
+.btn-wine {
+    background-color: var(--book-wine);
+    color: white;
+    border: none;
+    transition: 0.3s;
+}
+.btn-wine:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+.fw-bold {
+    color: var(--book-midnight);
+}
+.card {
+    transition: transform 0.2s ease;
+}
+.card:hover {
+    transform: translateY(-3px);
+}
+.profile-page-wrapper {
+    padding-left: 20px;
+    padding-right: 20px;
+}

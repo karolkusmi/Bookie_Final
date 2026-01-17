@@ -120,7 +120,7 @@ export const Signin = () => {
             <div className="signin-wrapper d-flex flex-column justify-content-center align-items-center ">
                 {/*Foto logo  */}
                 <div className="text-center mb-4">
-                    <img src={logo} alt="Bookie Logo" style={{ width: "180px", height: "auto" }} />
+                    <img src={logo} className="logo-signin" alt="logo" style={{ width: "180px", height: "auto" }} />
                 </div>
 
                 <div className="card p-4" style={{ width: "400px" }}>

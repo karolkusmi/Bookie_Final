@@ -6,6 +6,9 @@ import libroIzq from "../assets/img/Aboutus_img/libro_izq.png";
 import libroDer from "../assets/img/Aboutus_img/libro_der.png";
 
 export const Aboutus = () => {
+
+    const team = ["KAROL", "GERMAN", "LORENA"];
+
     return (
         <main className="wrapper_aboutus">
 
@@ -23,8 +26,9 @@ export const Aboutus = () => {
                 {/* TÍTULO */}
                 <h1 className="text_aboutus_title">About Us Page</h1>
 
+
                 {/* CONTENIDO */}
-                <div className="main-info-container">
+                < div className="main-info-container" >
 
                     <img
                         src={libroIzq}
@@ -50,9 +54,21 @@ export const Aboutus = () => {
                     />
 
                 </div>
+                <div className="team-container">
+                    {team.map((name, index) => (
+                        <div key={index} className="member-box shadow-sm">
+                            <div className="member-avatar">👤</div>
 
+                            <div className="blur-text-wrapper">
+                                <p className="member-name fw-bold m-0">{name}</p>
+                            </div>
+                            <span className="small text-muted">Developer</span>
+                        </div>
+
+                    ))}
+                </div>
             </div>
 
-        </main>
+        </main >
     );
 };
