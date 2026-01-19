@@ -1,91 +1,213 @@
-import React from "react";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Chat from "../components/Chat/Chat";
+import Toastify from 'toastify-js';
+import 'toastify-js/src/toastify.css';
 import "./Chat1.css";
 import portadaLibro from "../assets/img/portada_Libro.png";
-import { useBook } from "../components/BookContext";
-import { useChat } from "../components/ChatContext";
-import { Link } from "react-router-dom";
+import {
+    createOrJoinBookChannel,
+    generateBookChannelId,
+    isUserConnected
+} from "../components/Chat/utils/chat_logic";
+
+// Helper function to show error toast
+const showErrorToast = (message) => {
+    Toastify({
+        text: message,
+        duration: 5000,
+        close: true,
+        gravity: "top",
+        position: "right",
+        stopOnFocus: true,
+        style: {
+            background: "linear-gradient(to right, #c0392b, #e74c3c)",
+            borderRadius: "8px",
+            boxShadow: "0 4px 12px rgba(192, 57, 43, 0.4)",
+        },
+    }).showToast();
+};
 
 export const Chat1 = () => {
-    const { selectedBook } = useBook();
-    const { usersInRoom } = useChat();
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
 
-    // Si no hay libro seleccionado, mostrar mensaje
-    if (!selectedBook) {
-        return (
-            <div className="page-layout">
-                <div className="no-book-selected">
-                    <div className="text-center py-5">
-                        <h3>📚 No has seleccionado un libro</h3>
-                        <p className="text-muted">
-                            Ve al Home y selecciona un libro para empezar a chatear con otros lectores
-                        </p>
-                        <Link to="/">
-                            <button className="btn btn-wine mt-3">
-                                Ir al Home
-                            </button>
-                        </Link>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    const [activeChannelId, setActiveChannelId] = useState(null);
+    const [bookTitle, setBookTitle] = useState("");
+    const [activeReaders, setActiveReaders] = useState([]);
+    const [showNewChatModal, setShowNewChatModal] = useState(false);
+    const [newBookTitle, setNewBookTitle] = useState("");
+    const [isCreatingChannel, setIsCreatingChannel] = useState(false);
+
+    // Check authentication on mount
+    useEffect(() => {
+        const checkAuth = () => {
+            const streamToken = localStorage.getItem("stream_token");
+            const userData = localStorage.getItem("user_data");
+            const accessToken = localStorage.getItem("access_token");
+
+            // Debug: log auth state
+            console.log("Chat1 Auth Check:", {
+                hasAccessToken: !!accessToken,
+                hasStreamToken: !!streamToken,
+                hasUserData: !!userData
+            });
+
+            // Check if user is authenticated
+            if (!accessToken) {
+                console.log("No access token, redirecting to login");
+                navigate("/");
+                return false;
+            }
+
+            // If no stream token but has access token, user is logged in but stream not initialized
+            // This is OK, the Chat component will handle showing an error
+            return true;
+        };
+
+        if (!checkAuth()) return;
+
+        // Check for channel ID in URL params
+        const channelFromUrl = searchParams.get("channel");
+        const bookFromUrl = searchParams.get("book");
+
+        if (channelFromUrl) {
+            setActiveChannelId(channelFromUrl);
+        }
+        if (bookFromUrl) {
+            setBookTitle(decodeURIComponent(bookFromUrl));
+        }
+    }, [navigate, searchParams]);
+
+    // Handle creating or joining a book discussion channel
+    const handleCreateOrJoinChannel = async () => {
+        if (!newBookTitle.trim()) return;
+
+        setIsCreatingChannel(true);
+        try {
+            // Generate consistent channel ID (no timestamp)
+            const channelId = generateBookChannelId(newBookTitle);
+
+            // This will create the channel if it doesn't exist,
+            // or join it if it already exists
+            await createOrJoinBookChannel(newBookTitle);
+
+            setActiveChannelId(channelId);
+            setBookTitle(newBookTitle);
+            setShowNewChatModal(false);
+            setNewBookTitle("");
+
+            // Update URL with channel info
+            navigate(`/chat?channel=${channelId}&book=${encodeURIComponent(newBookTitle)}`, { replace: true });
+        } catch (error) {
+            console.error("Error creating/joining channel:", error);
+            showErrorToast("Error al crear o unirse al canal de discusión");
+        } finally {
+            setIsCreatingChannel(false);
+        }
+    };
+
+    // Handle joining a channel from the public list
+    const handleJoinChannel = (channelId, title) => {
+        setActiveChannelId(channelId);
+        setBookTitle(title);
+        navigate(`/chat?channel=${channelId}&book=${encodeURIComponent(title)}`, { replace: true });
+    };
+
+    // Handle closing a channel (go back to list)
+    const handleCloseChannel = () => {
+        setActiveChannelId(null);
+        setBookTitle("");
+        navigate("/chat", { replace: true });
+    };
 
     return (
         <div className="page-layout">
             {/* Barra Lateral Izquierda */}
             <aside className="sidebar">
-                <div className="book-section">
-                    <h4>Your Reading</h4>
-                    <img
-                        src={selectedBook.thumbnail || portadaLibro}
-                        alt={selectedBook.title}
-                        className="book-cover"
-                    />
-                    <p className="book-title">{selectedBook.title}</p>
-                    {selectedBook.authors && selectedBook.authors.length > 0 && (
-                        <p className="book-author text-muted small">
-                            {selectedBook.authors.join(", ")}
-                        </p>
-                    )}
-                    {selectedBook.publishedDate && (
-                        <p className="book-date text-muted small">
-                            📅 {selectedBook.publishedDate}
-                        </p>
-                    )}
-                </div>
+                {bookTitle && (
+                    <div className="book-section">
+                        <h4>Discusión Actual</h4>
+                        <img
+                            src={portadaLibro}
+                            alt="Portada del libro"
+                            className="book-cover"
+                        />
+                        <p className="book-title">{bookTitle}</p>
+                    </div>
+                )}
+
+                {!bookTitle && (
+                    <div className="book-section empty-state">
+                        <h4>Bienvenido al Chat</h4>
+                        <p className="empty-text">Selecciona un canal de la lista o crea una nueva discusión de libro</p>
+                    </div>
+                )}
 
                 <div className="readers-section">
-                    <h4>Active chat readers</h4>
+                    <h4>Lectores activos en el chat</h4>
                     <div className="avatar-group">
                         <img src="https://i.pravatar.cc/40?u=1" alt="user1" className="avatar" />
                         <img src="https://i.pravatar.cc/150?img=47" alt="user2" className="avatar" />
                         <img src="https://i.pravatar.cc/150?img=12" alt="user3" className="avatar" />
                     </div>
-                    <p className="readers-count">
-                        {usersInRoom > 0 ? (
-                            <>
-                                {usersInRoom} {usersInRoom === 1 ? 'persona' : 'personas'} leyendo ahora
-                            </>
-                        ) : (
-                            'Nadie más está aquí ahora'
-                        )}
-                    </p>
+                    <p className="readers-count">Aure y 12 más están aquí ahora</p>
                 </div>
 
-                <div className="back-home-section">
-                    <Link to="/">
-                        <button className="btn btn-outline-wine w-100">
-                            ← Volver al Home
-                        </button>
-                    </Link>
+                <div className="actions-section">
+                    <button
+                        className="new-chat-btn"
+                        onClick={() => setShowNewChatModal(true)}
+                    >
+                        + Nueva Discusión de Libro
+                    </button>
                 </div>
             </aside>
 
-            {/* Componente Chat */}
+            {/* Componente Chat Principal */}
             <main className="chat-main">
-                <Chat />
+                <Chat
+                    channelId={activeChannelId}
+                    bookTitle={bookTitle}
+                    onJoinChannel={handleJoinChannel}
+                    onCloseChannel={handleCloseChannel}
+                />
             </main>
+
+            {/* Modal para crear nuevo canal */}
+            {showNewChatModal && (
+                <div className="modal-overlay" onClick={() => setShowNewChatModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3>Nueva Discusión de Libro</h3>
+                        <p>Crea un canal para debatir sobre un libro con otros lectores. Si ya existe una discusión sobre este libro, te unirás automáticamente.</p>
+
+                        <input
+                            type="text"
+                            placeholder="Título del libro"
+                            value={newBookTitle}
+                            onChange={(e) => setNewBookTitle(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleCreateOrJoinChannel()}
+                            className="modal-input"
+                        />
+
+                        <div className="modal-actions">
+                            <button
+                                className="modal-btn cancel"
+                                onClick={() => setShowNewChatModal(false)}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                className="modal-btn create"
+                                onClick={handleCreateOrJoinChannel}
+                                disabled={isCreatingChannel || !newBookTitle.trim()}
+                            >
+                                {isCreatingChannel ? "Conectando..." : "Crear / Unirse"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
-}
+};

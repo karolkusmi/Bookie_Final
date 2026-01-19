@@ -4,6 +4,9 @@ import logo from "../assets/img/Logo.png";
 import { HomeIcon, BellIcon } from '@heroicons/react/24/outline';
 
 export const Header = () => {
+
+    const userData = localStorage.getItem("user_data");
+    const { username } = JSON.parse(userData);
     return (
         <header className="top-header">
             <div className="header-logo-section">
@@ -22,12 +25,31 @@ export const Header = () => {
                 </button>
 
                 <div className="user-profile-section">
-                    <span className="user-name">Lola</span>
+                    <span className="user-name">{username || "User"}</span>
                     <div className="profile-circle">
-                        <img
-                            src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80"
-                            alt="User Profile"
-                        />
+                        {/*
+                            Avatar tipo círculo con letra y color random
+                        */}
+                        <div
+                            style={{
+                                backgroundColor: `hsl(${Math.floor(
+                                    (username?.charCodeAt(0) || 65) * 16 % 360
+                                )}, 70%, 55%)`,
+                                color: "#fff",
+                                width: 40,
+                                height: 40,
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontWeight: "bold",
+                                fontSize: 20,
+                                userSelect: "none",
+                                textTransform: "uppercase"
+                            }}
+                        >
+                            {username?.[0] || "U"}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -26,6 +26,9 @@ cloudinary = "*"
 colorama = "*"
 pyyaml = "*"
 
+# Stream Chat
+stream-chat = "*"
+
 # Servers
 gunicorn = "*"  # La versión 20.x es vieja, mejor dejar que actualice
 

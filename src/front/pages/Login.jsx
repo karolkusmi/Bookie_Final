@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom";
+import Toastify from 'toastify-js'
+import 'toastify-js/src/toastify.css'
 import "./Login.css";
 import logo from "../assets/img/Logo.png";
 
@@ -32,7 +34,7 @@ export const Login = () => {
 				return;
 			}
 
-			const response = await fetch(`${backendUrl}/api/login`, {
+			const response = await fetch(`${backendUrl}/auth/login`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -51,6 +53,30 @@ export const Login = () => {
 			const data = await response.json();
 			localStorage.setItem('access_token', data.access_token);
 			localStorage.setItem('refresh_token', data.refresh_token);
+
+			// Guardar datos del usuario para Stream Chat
+			if (data.user) {
+				localStorage.setItem('user_data', JSON.stringify(data.user));
+			}
+
+			// Guardar Stream token si está disponible
+			if (data.stream_token) {
+				localStorage.setItem('stream_token', data.stream_token);
+			}
+			Toastify({
+				text: "Login successful",
+				duration: 3000,
+				destination: "https://github.com/apvarun/toastify-js",
+				newWindow: true,
+				close: true,
+				gravity: "top", // `top` or `bottom`
+				position: "right", // `left`, `center` or `right`
+				stopOnFocus: true, // Prevents dismissing of toast on hover
+				style: {
+					background: "linear-gradient(to right,rgb(245, 247, 127),rgb(255, 111, 111))",
+				},
+				onClick: function () { } // Callback after click
+			}).showToast();
 			setLoading(false);
 			navigate("/home");
 		} catch (error) {
