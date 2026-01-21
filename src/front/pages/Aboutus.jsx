@@ -14,7 +14,7 @@ export const Aboutus = () => {
     const team = [
         { name: "KAROL", photo: Ima_Karol, link: "https://www.linkedin.com/in/karol-kusmierz-b620b1367/" },
         { name: "GERMAN", photo: Ima_German, link: "https://www.linkedin.com/in/german-garcia-solano-a00352268/" },
-        { name: "LORENA", photo: Ima_Lore, link: "www.linkedin.com/in/lorenaacosta2019" }
+        { name: "LORENA", photo: Ima_Lore, link: "https://www.linkedin.com/in/lorenaacosta2019/" }
     ];
 
     return (
