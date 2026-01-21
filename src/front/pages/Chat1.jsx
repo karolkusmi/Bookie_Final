@@ -60,14 +60,13 @@ export const Chat1 = () => {
                 return false;
             }
 
-            // If no stream token but has access token, user is logged in but stream not initialized
-            // This is OK, the Chat component will handle showing an error
+        
             return true;
         };
 
         if (!checkAuth()) return;
 
-        // Check for channel ID in URL params
+        // Chekear si hay canal y libro en la URL
         const channelFromUrl = searchParams.get("channel");
         const bookFromUrl = searchParams.get("book");
 
@@ -79,17 +78,17 @@ export const Chat1 = () => {
         }
     }, [navigate, searchParams]);
 
-    // Handle creating or joining a book discussion channel
+    // crear o unirse a un canal basado en el título del libro
     const handleCreateOrJoinChannel = async () => {
         if (!newBookTitle.trim()) return;
 
         setIsCreatingChannel(true);
         try {
-            // Generate consistent channel ID (no timestamp)
-            const channelId = generateBookChannelId(newBookTitle);
 
-            // This will create the channel if it doesn't exist,
-            // or join it if it already exists
+            // Generar el ID del canal basado en el título del libro
+            const channelId = generateBookChannelId(newBookTitle);
+        
+            //Crear o unirse al canal
             await createOrJoinBookChannel(newBookTitle);
 
             setActiveChannelId(channelId);
