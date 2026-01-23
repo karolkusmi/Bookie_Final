@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { Navbar } from "../components/Navbar";
 import { Header } from "../components/Header";
 import ScrollToTop from "../components/ScrollToTop";
+import { Mylibrary } from "./pages/Mylibrary";
 
 export const Layout = () => {
     return (

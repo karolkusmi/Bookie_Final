@@ -38,6 +38,7 @@ export const router = createBrowserRouter(
         <Route path="/demo" element={<Demo />} />
         <Route path="/single/:theId" element={<Single />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/library" element={<Mylibrary />} />
       </Route>
 
       {/* 3. RUTA CON SOLO HEADER (Chat) */}
