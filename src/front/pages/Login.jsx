@@ -89,62 +89,73 @@ export const Login = () => {
 
 	return (
 
-
 		<div className="login-page d-flex justify-content-center align-items-center vh-100">
-			<div className="login-logo-container">
-				<img src={logo} alt="Bookie Logo" className="login-logo " />
-			</div>
-			<div className="card p-4" style={{ width: "350px" }}>
-				<form onSubmit={handleSubmit}>
-					<h1 className="text-center">Log In</h1>
-					<div className="mb-3">
-						<label htmlFor="exampleInputEmail1" className="form-label">Email address</label>
-						<input
-							type="email"
-							className="form-control"
-							id="exampleInputEmail1"
-							aria-describedby="emailHelp"
-							required
-							name="email"
-							value={formData.email}
-							onChange={handleChange}
-						/>
-						<div id="emailHelp" className="form-text">
-						</div>
-					</div>
+			{
+				loading
+					? (
+						<img src="src\front\assets\Books stack.gif" alt="Loading Books..." />
+					)
+					: (
+						<>
+							<div className="login-logo-container">
+								<img src={logo} alt="Bookie Logo" className="login-logo " />
+							</div>
+							<div className="card p-4" style={{ width: "350px" }}>
+								<form onSubmit={handleSubmit}>
+									<h1 className="text-center">Log In</h1>
+									<div className="mb-3">
+										<label htmlFor="exampleInputEmail1" className="form-label">Email address</label>
+										<input
+											type="email"
+											className="form-control"
+											id="exampleInputEmail1"
+											aria-describedby="emailHelp"
+											required
+											name="email"
+											value={formData.email}
+											onChange={handleChange}
+										/>
+										<div id="emailHelp" className="form-text">
+										</div>
+									</div>
 
-					<div className="mb-3">
-						<label htmlFor="exampleInputPassword1" className="form-label">Password</label>
-						<input
-							type="password"
-							className="form-control"
-							id="exampleInputPassword1"
-							name="password"
-							value={formData.password}
-							onChange={handleChange}
-							required
-						/>
-					</div>
+									<div className="mb-3">
+										<label htmlFor="exampleInputPassword1" className="form-label">Password</label>
+										<input
+											type="password"
+											className="form-control"
+											id="exampleInputPassword1"
+											name="password"
+											value={formData.password}
+											onChange={handleChange}
+											required
+										/>
+									</div>
 
-					<div className="mb-3 form-check">
-						<input
-							type="checkbox"
-							className="form-check-input"
-							id="exampleCheck1"
-							name="remember_me"
-						/>
+									<div className="mb-3 form-check">
+										<input
+											type="checkbox"
+											className="form-check-input"
+											id="exampleCheck1"
+											name="remember_me"
+										/>
 
-						<label className="form-check-label" htmlFor="exampleCheck1">
-							Remember me
-						</label>
-						<p><a href="#" className="link-underline-primary">Password forgotten?</a></p>
-					</div>
+										<label className="form-check-label" htmlFor="exampleCheck1">
+											Remember me
+										</label>
+										<p><a href="#" className="link-underline-primary">Password forgotten?</a></p>
+									</div>
 
-					<button type="submit" className="btn btn-primary w-100">Log in</button>
-					<Link to="/signin" className="btn btn-primary w-100 mt-2">Sign up</Link>
-				</form>
+									<button type="submit" className="btn btn-primary w-100">Log in</button>
+									<Link to="/signin" className="btn btn-primary w-100 mt-2">Sign up</Link>
+								</form>
 
-			</div>
+							</div>
+						</>
+
+					)
+			}
+
 		</div>
 
 	)
