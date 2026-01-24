@@ -1,8 +1,13 @@
 import React from "react";
 import PixelCard from "../components/PixelCard"; 
+import useGlobalReducer from '../hooks/useGlobalReducer';
 
 export const MyLibrary = () => {
-    
+
+    const { store, dispatch } = useGlobalReducer()
+    const handleDelete = (index) => {
+        dispatch({ type: 'delete_favorite', payload: index });
+    };
 
     const misLibros = [
         { id: 1, title: "El Alquimista", author: "Paulo Coelho", image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=300" },

@@ -1,0 +1,96 @@
+.library-container {
+    background-color: #E5E4D7;
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+.library-header {
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #11DA3E7; 
+    padding-bottom: 10px;
+}
+
+.library-title {
+    color: #231B59;
+    font-weight: bold;
+    font-size: 2rem;
+}
+
+.books-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 25px;
+    padding: 10px;
+}
+
+
+.book-card-fav {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+.book-card-fav:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 8px 25px rgba(35, 27, 89, 0.2);
+}
+
+.book-cover-wrapper {
+    height: 280px;
+    overflow: hidden;
+    position: relative;
+}
+
+.book-cover-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+
+.remove-fav-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #730202;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.remove-fav-btn:hover {
+    background: #730202;
+    color: white;
+}
+
+.book-info-fav {
+    padding: 15px;
+    text-align: center;
+}
+
+.book-title-fav {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #231B59;
+    margin-bottom: 5px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.book-author-fav {
+    font-size: 0.85rem;
+    color: #666;
+}
