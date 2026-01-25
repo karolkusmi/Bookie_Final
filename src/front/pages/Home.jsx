@@ -95,6 +95,22 @@ export const Home = () => {
       return;
     }
 
+{/* Debajo del nombre del libro en la Card de Reading Now */}
+<span className="fw-bold small">
+  {selectedBook?.title || "Your Book !!"}
+</span>
+
+{selectedBook && (
+  <button 
+    className="btn btn-sm mt-2" 
+    style={{ color: '#11DA3E7', border: '1px solid #11DA3E7' }}
+    onClick={() => dispatch({ type: 'add_favorite', payload: selectedBook })}
+  >
+    ♥ Add to Favs
+  </button>
+)}
+
+
     const accessToken = localStorage.getItem("access_token");
     if (!accessToken) {
       setUiMessage({ type: "danger", text: "No hay sesión activa. Inicia sesión de nuevo." });

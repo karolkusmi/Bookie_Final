@@ -1,6 +1,8 @@
 export const initialStore=()=>{
   return{
     message: null,
+    favorites: [],
+
     initialEventList: [
       { title: "Classic Novel Club", date: "May 25 • 6:00 PM", icon: "📖" },
       { title: "Sci‑Fi Readers Meetup", date: "May 28 • 7:30 PM", icon: "🚀" },
@@ -20,7 +22,23 @@ export default function storeReducer(store, action = {}) {
         ...store,
         eventGlobalList: [...store.eventGlobalList, action.payload]
       };
+
+
+case 'add_favorite':
+
+      if (store.favorites.find(fav => fav.title === action.payload.title)) return store;
+      return {
+        ...store,
+        favorites: [...store.favorites, action.payload]
+      };
+
+case 'delete_favorite':
+      return {
+        ...store,
+        favorites: store.favorites.filter((item, index) => index !== action.payload)
+      };
+
     default:
       throw Error('Unknown action.');
   }    
-}
+};
