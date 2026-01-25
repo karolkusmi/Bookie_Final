@@ -217,3 +217,93 @@ body {
 .card:nth-child(6) {
   animation-delay: 0.6s;
 }
+
+/* =========================
+   FIX: evitar overflow en Home
+   ========================= */
+.home-fixed-wrap {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  padding: 0 !important;
+}
+
+.home-row {
+  width: 100%;
+  margin: 0 !important;
+}
+
+/* =========================
+   MAGIC BENTO EFFECT
+   ========================= */
+
+.home-bento-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* Spotlight global */
+.home-global-spotlight {
+  position: absolute;
+  width: var(--mb-spotlight-size, 730px);
+  height: var(--mb-spotlight-size, 730px);
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    rgba(var(--mb-glow-rgb, 132, 0, 255), 0.14) 0%,
+    rgba(var(--mb-glow-rgb, 132, 0, 255), 0.06) 35%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  filter: blur(2px);
+}
+
+/* Cards participantes */
+.mb-card {
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-intensity: 0;
+  --glow-radius: 220px;
+}
+
+/* Glow de borde */
+.mb-border-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 6px;
+  background: radial-gradient(
+    var(--glow-radius) circle at var(--glow-x) var(--glow-y),
+    rgba(var(--mb-glow-rgb, 132, 0, 255), calc(var(--glow-intensity) * 0.45)) 0%,
+    rgba(var(--mb-glow-rgb, 132, 0, 255), calc(var(--glow-intensity) * 0.20)) 30%,
+    transparent 60%
+  );
+  border-radius: inherit;
+
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Click animation sutil */
+.mb-click {
+  animation: mbClick 240ms ease-out;
+}
+
+@keyframes mbClick {
+  0% { transform: translateY(-2px) scale(1); }
+  60% { transform: translateY(-2px) scale(0.985); }
+  100% { transform: translateY(-2px) scale(1); }
+}

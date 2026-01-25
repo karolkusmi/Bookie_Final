@@ -93,9 +93,9 @@ def login():
     access_token = create_token(user.id)
     refresh_token = create_refresh_token(user.id)
 
-    # Generar token de Stream Chat
+    
     stream_token = generate_stream_token(user)
-    # Crear respuesta
+    
     response_data = {
         "message": "Login successful",
         "access_token": access_token,
@@ -140,7 +140,7 @@ def books_search():
             headers={"User-Agent": "Mozilla/5.0"}
         )
     except requests.RequestException as e:
-        # Error de red/DNS/SSL/etc
+        
         return jsonify({
             "message": "Error connecting to Google Books",
             "error": str(e)
@@ -315,7 +315,7 @@ def get_stream_token():
     if not user_id:
         return jsonify({"message": "Invalid or expired token"}), 401
     
-    # Get user from database
+    
     user = User.query.get(user_id)
     if not user:
         return jsonify({"message": "User not found"}), 404
@@ -543,6 +543,7 @@ def create_or_join_channel():
     
     #---RUTAS BIBLOTECA DE LIBROS---#
 
+
 @api.route("/library/<int:user_id>/books", methods=["GET"])
 def get_user_library(user_id):
     user = User.query.get(user_id)
@@ -551,60 +552,67 @@ def get_user_library(user_id):
 
     return jsonify([book.serialize() for book in user.library_books]), 200
 
+
 @api.route("/library/<int:user_id>/books", methods=["POST"])
 def add_book_to_library(user_id):
     data = request.get_json() or {}
 
-    isbn = normalize_isbn(data.get("isbn", ""))
+    isbn = normalize_isbn(data.get("isbn"))
     title = data.get("title")
     authors = data.get("authors") or []
-    published_date = data.get("published_date")
+    publisher = data.get("publisher")  
     thumbnail = data.get("thumbnail")
 
     if not isbn or not title:
         return jsonify({"msg": "Missing isbn or title"}), 400
-    
+
     user = User.query.get(user_id)
     if not user:
         return jsonify({"msg": "User not found"}), 404
+
     
     if isinstance(authors, str):
         authors = [authors]
 
-        book = Book.query.get(isbn)
+    
+    if any(b.isbn == isbn for b in user.library_books):
+        return jsonify({"msg": "Book already in library"}), 409
 
+    
+    book = Book.query.get(isbn)
+
+    
     if not book:
         book = Book(
             isbn=isbn,
             title=title,
-            author="; ".join(authors),
-            published_date=published_date,
-            thumbnail=thumbnail
+            author=";".join(authors),
+            publisher=publisher,
+            thumbnail=thumbnail,
         )
         db.session.add(book)
 
-        if any(b.isbn == isbn for b in user.library_books):
-            return jsonify({"msg": "Book already in library"}), 409
-        
     user.library_books.append(book)
     db.session.commit()
 
     return jsonify({"msg": "Book added to library", "book": book.serialize()}), 201
 
-@api.route("/library/<int:user_id>/books/<isbn>", methods=["DELETE"])
+
+@api.route("/library/<int:user_id>/books/<string:isbn>", methods=["DELETE"])
 def remove_book_from_library(user_id, isbn):
     user = User.query.get(user_id)
     if not user:
         return jsonify({"msg": "User not found"}), 404
-    
+
     isbn = normalize_isbn(isbn)
 
     book = next((b for b in user.library_books if b.isbn == isbn), None)
     if not book:
         return jsonify({"msg": "Book not found in library"}), 404
-    
+
     user.library_books.remove(book)
     db.session.commit()
+
     return jsonify({"msg": "Book removed from library"}), 200
 
 

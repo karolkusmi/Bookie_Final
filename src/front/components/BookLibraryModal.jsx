@@ -1,130 +1,143 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import "./BookLibraryModal.css";
 
-const BookLibraryModal = ({ isOpen, onClose, onSelect }) => {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:3001";
+const normalizeIsbn = (isbn) => (isbn || "").replaceAll("-", "").replaceAll(" ", "").toUpperCase();
 
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
+export default function BookLibraryModal({ isOpen, onClose, onSelect, onAddToLibrary }) {
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [foundBooks, setFoundBooks] = useState([]);
+  const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  const searchBooks = async () => {
-    setError(null);
-    setResults([]);
+  const canAdd = useMemo(() => {
+    const isbn = normalizeIsbn(selected?.isbn);
+    return !!selected && !!isbn && !saving;
+  }, [selected, saving]);
 
-    const q = query.trim();
-    if (!q) {
-      setError("Escribe el nombre del libro para buscar.");
+  if (!isOpen) return null;
+
+  const handleSearch = async () => {
+    const q = searchTerm.trim();
+    if (!q) return;
+
+    if (!backendUrl) {
+      alert("Falta VITE_BACKEND_URL");
       return;
     }
 
+    setLoading(true);
     try {
-      setLoading(true);
-      const resp = await fetch(
-        `${backendUrl}/api/books/search?title=${encodeURIComponent(q)}&maxResults=10&langRestrict=es`
-      );
-
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.message || "Error buscando libros");
-      }
-
+      const resp = await fetch(`${backendUrl}/api/books/search?title=${encodeURIComponent(q)}`);
+      if (!resp.ok) throw new Error("Search failed");
       const data = await resp.json();
-      setResults(data.items || []);
+      setFoundBooks(data.items || []);
     } catch (e) {
-      setError(e.message);
+      console.error(e);
+      setFoundBooks([]);
+      alert("No se pudo buscar libros.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
+  const handlePick = (b) => {
+    const mapped = {
+      id: b.id,
+      title: b.title,
+      authors: Array.isArray(b.authors) ? b.authors : [],
+      publisher: b.publisher || null,
+      thumbnail: b.thumbnail || null,
+      isbn: normalizeIsbn(b.isbn),
+    };
+    setSelected(mapped);
+    onSelect?.(mapped);
+  };
+
+  const handleAdd = async () => {
+    if (!canAdd) return;
+    setSaving(true);
+    try {
+      await onAddToLibrary?.(selected);
+      onClose?.();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <>
-      <div className="modal-backdrop fade show" onClick={onClose} />
+    <div className="blm-backdrop" role="dialog" aria-modal="true">
+      <div className="blm-modal">
+        <div className="blm-header">
+          <div className="blm-title">Book Library</div>
+          <button type="button" className="blm-close" onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </div>
 
-      <div className="modal fade show" style={{ display: "block" }} role="dialog" aria-modal="true">
-        <div className="modal-dialog modal-dialog-centered modal-lg" role="document">
-          <div className="modal-content" style={{ borderRadius: "16px" }}>
-            <div className="modal-header">
-              <h5 className="modal-title">Seleccionar libro</h5>
-              <button type="button" className="btn-close" onClick={onClose} aria-label="Close" />
-            </div>
+        <div className="blm-body">
+          <div className="blm-searchbar">
+            <input
+              className="blm-input"
+              placeholder="Search by title..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => (e.key === "Enter" ? handleSearch() : null)}
+            />
+            <button className="blm-btn blm-btn-primary" onClick={handleSearch} disabled={loading}>
+              {loading ? "Searching..." : "Search"}
+            </button>
+          </div>
 
-            <div className="modal-body">
-              <div className="d-flex gap-2 mb-3">
-                <input
-                  className="form-control"
-                  placeholder="Buscar por título (ej: El principito)"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") searchBooks();
-                  }}
-                />
-                <button className="btn btn-wine" onClick={searchBooks} disabled={loading}>
-                  {loading ? "Buscando..." : "Buscar"}
+          <div className="blm-grid">
+            {foundBooks.map((b) => {
+              const thumb = b.thumbnail || "https://via.placeholder.com/160x240";
+              const isbn = normalizeIsbn(b.isbn);
+              const isSelected = normalizeIsbn(selected?.isbn) === isbn;
+
+              return (
+                <button
+                  type="button"
+                  key={b.id || b.isbn || b.title}
+                  className={`blm-card ${isSelected ? "is-selected" : ""}`}
+                  onClick={() => handlePick(b)}
+                >
+                  <div className="blm-cover">
+                    <img src={thumb} alt={b.title} />
+                  </div>
+                  <div className="blm-meta">
+                    <div className="blm-book-title" title={b.title}>
+                      {b.title || "Untitled"}
+                    </div>
+                    <div className="blm-book-authors" title={(b.authors || []).join(", ")}>
+                      {(b.authors || []).join(", ") || "Unknown author"}
+                    </div>
+                    <div className="blm-book-isbn" title={isbn || ""}>
+                      {isbn ? `ISBN: ${isbn}` : "No ISBN"}
+                    </div>
+                  </div>
                 </button>
-              </div>
+              );
+            })}
+          </div>
+        </div>
 
-              {error && <div className="text-danger small">{error}</div>}
-
-              {results.length === 0 && !loading && !error && query.trim() && (
-                <div className="text-muted small">No se encontraron resultados para “{query}”.</div>
-              )}
-
-              <div style={{ maxHeight: "420px", overflowY: "auto" }}>
-                {results.map((book) => (
-                  <button
-                    key={book.id}
-                    type="button"
-                    className="w-100 d-flex align-items-center gap-3 p-2 border rounded-3 mb-2 bg-white text-start"
-                    style={{ cursor: "pointer" }}
-                    onClick={() => {
-                      onSelect(book);
-                      onClose();
-                    }}
-                  >
-                    <div style={{ width: 50, height: 70, flex: "0 0 auto" }}>
-                      {book.thumbnail ? (
-                        <img
-                          src={book.thumbnail}
-                          alt={book.title}
-                          className="w-100 h-100 object-fit-cover rounded"
-                        />
-                      ) : (
-                        <div className="w-100 h-100 bg-light rounded" />
-                      )}
-                    </div>
-
-                    <div className="flex-grow-1">
-                      <div className="fw-bold small">{book.title}</div>
-                      <div className="text-muted" style={{ fontSize: "0.75rem" }}>
-                        {book.authors?.length ? book.authors.join(", ") : "Autor desconocido"}
-                        {book.publishedDate ? ` · ${book.publishedDate}` : ""}
-                      </div>
-                      <div className="text-muted" style={{ fontSize: "0.75rem" }}>
-                        ISBN: <span className="fw-semibold">{book.isbn || "No disponible"}</span>
-                      </div>
-                    </div>
-
-                    <span className="btn btn-outline-wine btn-sm">Elegir</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button type="button" className="btn btn-outline-secondary" onClick={onClose}>
-                Cerrar
-              </button>
-            </div>
+        <div className="blm-footer">
+          <div className="blm-selected">
+            {selected?.title ? `Selected: ${selected.title}` : "Select a book to add it"}
+          </div>
+          <div className="blm-actions">
+            <button className="blm-btn blm-btn-ghost" onClick={onClose}>
+              Close
+            </button>
+            <button className="blm-btn blm-btn-wine" onClick={handleAdd} disabled={!canAdd}>
+              {saving ? "Adding..." : "Add to library"}
+            </button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
-};
-
-export default BookLibraryModal;
+}

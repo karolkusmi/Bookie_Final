@@ -1,0 +1,233 @@
+/* ===============================
+   CONTENEDOR GENERAL
+   =============================== */
+
+.ns-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: visible;
+}
+
+/* ===============================
+   OVERLAY
+   =============================== */
+
+.ns-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 16, 32, 0.35);
+  backdrop-filter: blur(2px);
+  z-index: 40;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ===============================
+   BARRA COLAPSADA (84px)
+   =============================== */
+
+.ns-collapsed {
+  position: relative;
+  z-index: 60;
+  width: 84px;
+  height: 100%;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: #0b1020;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Avatar */
+.ns-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2px solid rgba(177, 158, 239, 0.9);
+}
+
+.ns-avatar.lg {
+  width: 56px;
+  height: 56px;
+}
+
+/* Username */
+.ns-username {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 800;
+  font-size: 12px;
+  text-align: center;
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Botón */
+.ns-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(9, 14, 30, 0.35);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.ns-toggle:focus-visible {
+  outline: 2px solid #ffffffaa;
+  outline-offset: 3px;
+}
+
+/* ===============================
+   CAPAS DE FONDO DEL PANEL
+   EMPIEZAN DESPUÉS DE LA BARRA
+   =============================== */
+
+.ns-prelayers {
+  position: absolute;
+  top: 0;
+  left: 84px;              /* 🔥 CLAVE */
+  width: 320px;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.ns-prelayer {
+  position: absolute;
+  inset: 0;
+}
+
+.ns-prelayer.layer-1 {
+  background: #0b1020;
+}
+
+.ns-prelayer.layer-2 {
+  background: #111a33;
+  opacity: 0.96;
+}
+
+/* ===============================
+   PANEL DESPLEGABLE
+   =============================== */
+
+.ns-panel {
+  position: absolute;
+  top: 0;
+  left: 84px;              /* 🔥 CLAVE */
+  width: 320px;
+  height: 100%;
+  z-index: 55;
+  background: rgba(9, 14, 30, 0.82);
+  backdrop-filter: blur(14px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 18px 14px 14px 14px;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+/* ===============================
+   HEADER DEL PANEL
+   =============================== */
+
+.ns-panelTop {
+  padding: 10px 6px 14px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 14px;
+}
+
+.ns-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ns-userText {
+  min-width: 0;
+}
+
+.ns-userName {
+  color: #fff;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.ns-userEmail {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===============================
+   LISTA DE ITEMS
+   =============================== */
+
+.ns-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ns-itemWrap {
+  overflow: hidden;
+}
+
+.ns-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 1rem;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.ns-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(177, 158, 239, 0.65);
+}
+
+.ns-itemIcon {
+  width: 22px;
+  height: 22px;
+  opacity: 0.95;
+}
+
+.ns-itemLabel {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.4px;
+  font-size: 1.05rem;
+  white-space: nowrap; /* 🔥 evita cortes */
+}
+
+/* ===============================
+   RESPONSIVE (MÓVIL)
+   =============================== */
+
+@media (max-width: 420px) {
+  .ns-prelayers,
+  .ns-panel {
+    left: 0;
+    width: 100vw;
+  }
+}
