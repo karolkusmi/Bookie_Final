@@ -6,27 +6,58 @@ import { useUser } from "../components/UserContext";
 export const Profile = () => {
   const { profileImg, updateProfileImg, userData } = useUser();
 
+  const API_BASE = useMemo(() => import.meta.env.VITE_BACKEND_URL || "http://localhost:3001", []);
+
   const [libraryBooks, setLibraryBooks] = useState([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [deletingIsbn, setDeletingIsbn] = useState(null);
   const [readingNow, setReadingNow] = useState(null);
 
-  const API_BASE = useMemo(() => import.meta.env.VITE_BACKEND_URL || "http://localhost:3001", []);
+  const [aboutText, setAboutText] = useState("");
+  const [top3, setTop3] = useState([null, null, null]);
+  const [activeSlot, setActiveSlot] = useState(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [foundBooks, setFoundBooks] = useState([]);
+  const [loadingSearch, setLoadingSearch] = useState(false);
 
   const normalizeIsbn = (isbn) => (isbn || "").replaceAll("-", "").replaceAll(" ", "").toUpperCase();
 
   const getUserId = () => {
-    const ctxId = userData?.id;
-    if (ctxId) return ctxId;
+    const fromCtx = userData?.id;
+    if (fromCtx) return fromCtx;
     const saved = JSON.parse(localStorage.getItem("user_data") || "null");
     return saved?.id || null;
   };
 
+  const getPrefsKey = () => {
+    const uid = getUserId();
+    return uid ? `profile_prefs_${uid}` : null;
+  };
+
+  const loadPrefs = () => {
+    const key = getPrefsKey();
+    if (!key) return null;
+    try {
+      return JSON.parse(localStorage.getItem(key) || "null");
+    } catch {
+      return null;
+    }
+  };
+
+  const savePrefs = (next) => {
+    const key = getPrefsKey();
+    if (!key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch {}
+  };
+
   const loadReadingNow = () => {
     try {
-      const savedSelected = localStorage.getItem("selected_book");
-      if (!savedSelected) return null;
-      const parsed = JSON.parse(savedSelected);
+      const raw = localStorage.getItem("selected_book");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
       if (!parsed) return null;
       return {
         title: parsed.title,
@@ -34,8 +65,7 @@ export const Profile = () => {
         isbn: normalizeIsbn(parsed.isbn),
         authors: parsed.authors || [],
       };
-    } catch (e) {
-      localStorage.removeItem("selected_book");
+    } catch {
       return null;
     }
   };
@@ -61,21 +91,6 @@ export const Profile = () => {
     }
   };
 
-  useEffect(() => {
-    setReadingNow(loadReadingNow());
-    fetchLibrary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userData?.id]);
-
-  useEffect(() => {
-    const onStorage = (e) => {
-      if (e.key === "selected_book") setReadingNow(loadReadingNow());
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const removeFromLibrary = async (isbn) => {
     const userId = getUserId();
     if (!userId) return;
@@ -99,13 +114,90 @@ export const Profile = () => {
     }
   };
 
-  const fallbackCurrent = libraryBooks?.[0] || null;
-  const current = readingNow || fallbackCurrent;
+  const searchBooks = async () => {
+    const q = searchTerm.trim();
+    if (!q) return;
+
+    setLoadingSearch(true);
+    try {
+      const resp = await fetch(`${API_BASE}/api/books/search?title=${encodeURIComponent(q)}`);
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err?.message || "Search failed");
+      }
+      const data = await resp.json();
+      setFoundBooks(Array.isArray(data.items) ? data.items : []);
+    } catch (e) {
+      console.error(e);
+      setFoundBooks([]);
+      alert("No se pudo buscar libros.");
+    } finally {
+      setLoadingSearch(false);
+    }
+  };
+
+  const pickTop3Book = (item) => {
+    if (activeSlot === null) return;
+
+    const mapped = {
+      id: item.id,
+      title: item.title,
+      authors: Array.isArray(item.authors) ? item.authors : [],
+      publisher: item.publisher || null,
+      thumbnail: item.thumbnail || null,
+      isbn: normalizeIsbn(item.isbn),
+    };
+
+    setTop3((prev) => {
+      const next = [...prev];
+      next[activeSlot] = mapped;
+      savePrefs({ aboutText, top3: next });
+      return next;
+    });
+
+    setSearchTerm("");
+    setFoundBooks([]);
+    setActiveSlot(null);
+  };
+
+  const clearTop3Slot = (idx) => {
+    setTop3((prev) => {
+      const next = [...prev];
+      next[idx] = null;
+      savePrefs({ aboutText, top3: next });
+      return next;
+    });
+  };
+
+  const onChangeAbout = (val) => {
+    setAboutText(val);
+    savePrefs({ aboutText: val, top3 });
+  };
+
+  useEffect(() => {
+    const uid = getUserId();
+    if (!uid) return;
+
+    setReadingNow(loadReadingNow());
+    fetchLibrary();
+
+    const prefs = loadPrefs();
+    if (prefs?.aboutText !== undefined) setAboutText(prefs.aboutText);
+    if (Array.isArray(prefs?.top3)) {
+      setTop3([prefs.top3[0] || null, prefs.top3[1] || null, prefs.top3[2] || null]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.id]);
+
+  const current = readingNow || libraryBooks?.[0] || null;
 
   const user = {
-    name: userData?.username || userData?.email || JSON.parse(localStorage.getItem("user_data") || "null")?.email || "Usuario",
+    name:
+      userData?.username ||
+      userData?.email ||
+      JSON.parse(localStorage.getItem("user_data") || "null")?.email ||
+      "Usuario",
     location: "Madrid, Spain",
-    about: "The Reading Room is my sanctuary. I love fantasy novels, thrillers, and diving deep into character development.",
     favoriteGenres: ["Fantasy", "Sci-Fi", "Thriller"],
   };
 
@@ -122,12 +214,70 @@ export const Profile = () => {
       },
       (error, result) => {
         if (error) console.error("❌ Error:", error);
-        if (result && result.event === "success") {
-          updateProfileImg(result.info.secure_url);
-        }
+        if (result && result.event === "success") updateProfileImg(result.info.secure_url);
       }
     );
     widget.open();
+  };
+
+  const TopCard = ({ idx }) => {
+    const b = top3[idx];
+    return (
+      <div className="card border-0 shadow-sm p-3" style={{ borderRadius: 14, backgroundColor: "white" }}>
+        <div className="d-flex gap-3 align-items-start">
+          <img
+            src={b?.thumbnail || "https://via.placeholder.com/80x110"}
+            alt={b?.title || `Top ${idx + 1}`}
+            style={{ width: 70, height: 95, objectFit: "cover", borderRadius: 10 }}
+          />
+          <div className="flex-grow-1" style={{ minWidth: 0 }}>
+            <div className="fw-bold" style={{ color: "#231B59" }}>
+              Top {idx + 1}
+            </div>
+            <div
+              className="fw-bold"
+              style={{
+                fontSize: 13,
+                color: "#231B59",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+              title={b?.title || ""}
+            >
+              {b?.title || "Pick a book"}
+            </div>
+            <div
+              className="text-muted"
+              style={{
+                fontSize: 12,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+              title={(b?.authors || []).join(", ")}
+            >
+              {(b?.authors || []).join(", ")}
+            </div>
+          </div>
+
+          <div className="d-flex flex-column gap-2">
+            <button
+              className="btn btn-sm"
+              style={{ backgroundColor: "#231B59", color: "white" }}
+              onClick={() => setActiveSlot(idx)}
+            >
+              {b ? "Change" : "Add"}
+            </button>
+            {b && (
+              <button className="btn btn-sm btn-outline-secondary" onClick={() => clearTop3Slot(idx)}>
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -139,12 +289,7 @@ export const Profile = () => {
               src={profileImg}
               alt={user.name}
               className="rounded-circle"
-              style={{
-                width: "120px",
-                height: "120px",
-                objectFit: "cover",
-                border: "4px solid #11DA3E7",
-              }}
+              style={{ width: "120px", height: "120px", objectFit: "cover", border: "4px solid #11DA3E7" }}
             />
             <div className="ms-4">
               <h1 className="fw-bold mb-1" style={{ color: "#231B59" }}>
@@ -168,20 +313,138 @@ export const Profile = () => {
               <h5 className="fw-bold mb-3" style={{ color: "#231B59" }}>
                 <TagIcon style={{ width: "22px", marginRight: "10px" }} /> About Me
               </h5>
-              <p className="text-muted">{user.about}</p>
+
+              <textarea
+                className="form-control"
+                rows={5}
+                value={aboutText}
+                onChange={(e) => onChangeAbout(e.target.value)}
+                placeholder="Write something about you..."
+                style={{ borderRadius: 12 }}
+              />
+
               <div className="mt-4">
                 <h6 className="fw-bold small mb-2">Favorite Genres</h6>
                 <div className="d-flex gap-2 flex-wrap">
                   {user.favoriteGenres.map((g) => (
-                    <span
-                      key={g}
-                      className="badge rounded-pill p-2 px-3"
-                      style={{ backgroundColor: "#11DA3E7", color: "#231B59" }}
-                    >
+                    <span key={g} className="badge rounded-pill p-2 px-3" style={{ backgroundColor: "#11DA3E7", color: "#231B59" }}>
                       {g}
                     </span>
                   ))}
                 </div>
+              </div>
+
+              <div className="mt-4">
+                <h6 className="fw-bold" style={{ color: "#231B59" }}>
+                  Top 3 Favorite Books
+                </h6>
+
+                <div className="d-flex flex-column gap-3 mt-3">
+                  <TopCard idx={0} />
+                  <TopCard idx={1} />
+                  <TopCard idx={2} />
+                </div>
+
+                {activeSlot !== null && (
+                  <div className="card border-0 shadow-sm p-3 mt-4" style={{ borderRadius: 14, backgroundColor: "#F7F6EF" }}>
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <div className="fw-bold" style={{ color: "#231B59" }}>
+                        Search a book for Top {activeSlot + 1}
+                      </div>
+                      <button className="btn btn-sm btn-outline-secondary" onClick={() => setActiveSlot(null)}>
+                        Close
+                      </button>
+                    </div>
+
+                    <div className="d-flex gap-2">
+                      <input
+                        className="form-control"
+                        placeholder="Search by title..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={(e) => (e.key === "Enter" ? searchBooks() : null)}
+                        style={{ borderRadius: 12 }}
+                      />
+                      <button
+                        className="btn btn-sm"
+                        style={{ backgroundColor: "#231B59", color: "white", borderRadius: 12, minWidth: 92 }}
+                        onClick={searchBooks}
+                        disabled={loadingSearch}
+                      >
+                        {loadingSearch ? "..." : "Search"}
+                      </button>
+                    </div>
+
+                    <div className="mt-3" style={{ maxHeight: 260, overflowY: "auto" }}>
+                      {foundBooks.length === 0 ? (
+                        <div className="text-muted" style={{ fontSize: 13 }}>
+                          Search results will appear here.
+                        </div>
+                      ) : (
+                        <div className="d-flex flex-column gap-2">
+                          {foundBooks.map((b) => (
+                            <button
+                              key={b.id || b.isbn || b.title}
+                              type="button"
+                              onClick={() => pickTop3Book(b)}
+                              className="card border-0 shadow-sm p-2 text-start"
+                              style={{ borderRadius: 12, backgroundColor: "white" }}
+                            >
+                              <div className="d-flex gap-2 align-items-start">
+                                <img
+                                  src={b.thumbnail || "https://via.placeholder.com/60x85"}
+                                  alt={b.title}
+                                  style={{ width: 52, height: 74, objectFit: "cover", borderRadius: 10 }}
+                                />
+                                <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                                  <div
+                                    className="fw-bold"
+                                    style={{
+                                      fontSize: 13,
+                                      color: "#231B59",
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                    }}
+                                    title={b.title}
+                                  >
+                                    {b.title}
+                                  </div>
+                                  <div
+                                    className="text-muted"
+                                    style={{
+                                      fontSize: 12,
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                    }}
+                                    title={(b.authors || []).join(", ")}
+                                  >
+                                    {(b.authors || []).join(", ")}
+                                  </div>
+                                  <div
+                                    className="text-muted"
+                                    style={{
+                                      fontSize: 11,
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                    }}
+                                  >
+                                    {b.isbn ? `ISBN: ${normalizeIsbn(b.isbn)}` : "No ISBN"}
+                                  </div>
+                                </div>
+                                <span className="badge rounded-pill" style={{ backgroundColor: "#231B59" }}>
+                                  Select
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -236,11 +499,11 @@ export const Profile = () => {
                           alt={b.title}
                           style={{ width: "55px", height: "75px", objectFit: "cover", borderRadius: "6px" }}
                         />
-                        <div className="flex-grow-1">
+                        <div className="flex-grow-1" style={{ minWidth: 0 }}>
                           <div className="fw-bold" style={{ fontSize: "13px", color: "#231B59" }}>
                             {b.title}
                           </div>
-                          <div className="text-muted" style={{ fontSize: "12px" }}>
+                          <div className="text-muted" style={{ fontSize: "12px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {(b.authors || []).join(", ")}
                           </div>
                         </div>
