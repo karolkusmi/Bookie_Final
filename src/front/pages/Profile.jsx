@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import "./Profile.css";
 import { PencilIcon, BookOpenIcon, TagIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { useUser } from "../components/UserContext";
+import BookLibraryModal from "../components/BookLibraryModal";
 
 export const Profile = () => {
   const { profileImg, updateProfileImg, userData } = useUser();
@@ -16,10 +17,10 @@ export const Profile = () => {
   const [aboutText, setAboutText] = useState("");
   const [top3, setTop3] = useState([null, null, null]);
   const [activeSlot, setActiveSlot] = useState(null);
+  const [favoriteGenres, setFavoriteGenres] = useState([]);
+  const [newGenre, setNewGenre] = useState("");
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [foundBooks, setFoundBooks] = useState([]);
-  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [isBookModalOpen, setIsBookModalOpen] = useState(false);
 
   const normalizeIsbn = (isbn) => (isbn || "").replaceAll("-", "").replaceAll(" ", "").toUpperCase();
 
@@ -50,6 +51,16 @@ export const Profile = () => {
     if (!key) return;
     try {
       localStorage.setItem(key, JSON.stringify(next));
+    } catch {}
+  };
+
+  const saveGenres = (genres) => {
+    const key = getPrefsKey();
+    if (!key) return;
+    try {
+      const currentPrefs = loadPrefs() || {};
+      currentPrefs.favoriteGenres = genres;
+      localStorage.setItem(key, JSON.stringify(currentPrefs));
     } catch {}
   };
 
@@ -114,27 +125,6 @@ export const Profile = () => {
     }
   };
 
-  const searchBooks = async () => {
-    const q = searchTerm.trim();
-    if (!q) return;
-
-    setLoadingSearch(true);
-    try {
-      const resp = await fetch(`${API_BASE}/api/books/search?title=${encodeURIComponent(q)}`);
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err?.message || "Search failed");
-      }
-      const data = await resp.json();
-      setFoundBooks(Array.isArray(data.items) ? data.items : []);
-    } catch (e) {
-      console.error(e);
-      setFoundBooks([]);
-      alert("No se pudo buscar libros.");
-    } finally {
-      setLoadingSearch(false);
-    }
-  };
 
   const pickTop3Book = (item) => {
     if (activeSlot === null) return;
@@ -151,28 +141,68 @@ export const Profile = () => {
     setTop3((prev) => {
       const next = [...prev];
       next[activeSlot] = mapped;
-      savePrefs({ aboutText, top3: next });
+      savePrefs({ aboutText, top3: next, favoriteGenres });
       return next;
     });
 
-    setSearchTerm("");
-    setFoundBooks([]);
     setActiveSlot(null);
+    setIsBookModalOpen(false);
+  };
+
+  const handleBookSelect = (book) => {
+    if (activeSlot !== null) {
+      pickTop3Book(book);
+    }
   };
 
   const clearTop3Slot = (idx) => {
     setTop3((prev) => {
       const next = [...prev];
       next[idx] = null;
-      savePrefs({ aboutText, top3: next });
+      savePrefs({ aboutText, top3: next, favoriteGenres });
       return next;
     });
   };
 
   const onChangeAbout = (val) => {
     setAboutText(val);
-    savePrefs({ aboutText: val, top3 });
+    savePrefs({ aboutText: val, top3, favoriteGenres });
   };
+
+  const addGenre = () => {
+    const genre = newGenre.trim();
+    if (!genre) return;
+    
+    // Normalizar: primera letra mayúscula, resto minúsculas
+    const normalizedGenre = genre.charAt(0).toUpperCase() + genre.slice(1).toLowerCase();
+    
+    // Verificar que no exista ya
+    if (favoriteGenres.includes(normalizedGenre)) {
+      setNewGenre("");
+      return;
+    }
+
+    const updated = [...favoriteGenres, normalizedGenre];
+    setFavoriteGenres(updated);
+    saveGenres(updated);
+    savePrefs({ aboutText, top3, favoriteGenres: updated });
+    setNewGenre("");
+  };
+
+  const removeGenre = (genreToRemove) => {
+    const updated = favoriteGenres.filter((g) => g !== genreToRemove);
+    setFavoriteGenres(updated);
+    saveGenres(updated);
+    savePrefs({ aboutText, top3, favoriteGenres: updated });
+  };
+
+  // Lista de géneros comunes para sugerir
+  const commonGenres = [
+    "Fantasy", "Sci-Fi", "Thriller", "Romance", "Mystery", "Horror",
+    "Historical Fiction", "Biography", "Non-Fiction", "Adventure",
+    "Drama", "Comedy", "Poetry", "Young Adult", "Children's",
+    "Crime", "Suspense", "Western", "Philosophy", "Self-Help"
+  ];
 
   useEffect(() => {
     const uid = getUserId();
@@ -186,6 +216,14 @@ export const Profile = () => {
     if (Array.isArray(prefs?.top3)) {
       setTop3([prefs.top3[0] || null, prefs.top3[1] || null, prefs.top3[2] || null]);
     }
+    if (Array.isArray(prefs?.favoriteGenres)) {
+      setFavoriteGenres(prefs.favoriteGenres);
+    } else {
+      // Valores por defecto si no hay géneros guardados
+      const defaultGenres = ["Fantasy", "Sci-Fi", "Thriller"];
+      setFavoriteGenres(defaultGenres);
+      saveGenres(defaultGenres);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData?.id]);
 
@@ -198,7 +236,6 @@ export const Profile = () => {
       JSON.parse(localStorage.getItem("user_data") || "null")?.email ||
       "Usuario",
     location: "Madrid, Spain",
-    favoriteGenres: ["Fantasy", "Sci-Fi", "Thriller"],
   };
 
   const openCloudinaryWidget = () => {
@@ -225,52 +262,97 @@ export const Profile = () => {
     return (
       <div className="card border-0 shadow-sm p-3" style={{ borderRadius: 14, backgroundColor: "white" }}>
         <div className="d-flex gap-3 align-items-start">
-          <img
-            src={b?.thumbnail || "https://via.placeholder.com/80x110"}
-            alt={b?.title || `Top ${idx + 1}`}
-            style={{ width: 70, height: 95, objectFit: "cover", borderRadius: 10 }}
-          />
-          <div className="flex-grow-1" style={{ minWidth: 0 }}>
-            <div className="fw-bold" style={{ color: "#231B59" }}>
-              Top {idx + 1}
-            </div>
-            <div
-              className="fw-bold"
-              style={{
-                fontSize: 13,
-                color: "#231B59",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-              title={b?.title || ""}
-            >
-              {b?.title || "Pick a book"}
-            </div>
-            <div
-              className="text-muted"
-              style={{
-                fontSize: 12,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-              title={(b?.authors || []).join(", ")}
-            >
-              {(b?.authors || []).join(", ")}
-            </div>
-          </div>
+          {b ? (
+            <>
+              <img
+                src={b.thumbnail || "https://via.placeholder.com/80x110"}
+                alt={b.title}
+                style={{ width: 70, height: 95, objectFit: "cover", borderRadius: 10 }}
+              />
+              <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                <div className="fw-bold" style={{ color: "#231B59", fontSize: 11, marginBottom: 4 }}>
+                  Top {idx + 1}
+                </div>
+                <div
+                  className="fw-bold"
+                  style={{
+                    fontSize: 14,
+                    color: "#231B59",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    marginBottom: 4,
+                  }}
+                  title={b.title}
+                >
+                  {b.title}
+                </div>
+                <div
+                  className="text-muted"
+                  style={{
+                    fontSize: 12,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    marginBottom: 2,
+                  }}
+                  title={(b.authors || []).join(", ")}
+                >
+                  {(b.authors || []).join(", ") || "Autor desconocido"}
+                </div>
+                {b.isbn && (
+                  <div className="text-muted" style={{ fontSize: 10 }}>
+                    ISBN: {b.isbn}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                style={{
+                  width: 70,
+                  height: 95,
+                  backgroundColor: "#f0f0f0",
+                  borderRadius: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#999",
+                  fontSize: 24,
+                }}
+              >
+                📚
+              </div>
+              <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                <div className="fw-bold" style={{ color: "#231B59" }}>
+                  Top {idx + 1}
+                </div>
+                <div className="text-muted" style={{ fontSize: 13 }}>
+                  Pick a book
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="d-flex flex-column gap-2">
             <button
               className="btn btn-sm"
-              style={{ backgroundColor: "#231B59", color: "white" }}
-              onClick={() => setActiveSlot(idx)}
+              style={{ backgroundColor: "#231B59", color: "white", minWidth: 80 }}
+              onClick={() => {
+                setActiveSlot(idx);
+                setIsBookModalOpen(true);
+              }}
             >
               {b ? "Change" : "Add"}
             </button>
             {b && (
-              <button className="btn btn-sm btn-outline-secondary" onClick={() => clearTop3Slot(idx)}>
+              <button
+                className="btn btn-sm btn-outline-danger"
+                onClick={() => clearTop3Slot(idx)}
+                style={{ minWidth: 80 }}
+              >
+                <TrashIcon style={{ width: 14, marginRight: 4 }} />
                 Remove
               </button>
             )}
@@ -324,14 +406,97 @@ export const Profile = () => {
               />
 
               <div className="mt-4">
-                <h6 className="fw-bold small mb-2">Favorite Genres</h6>
-                <div className="d-flex gap-2 flex-wrap">
-                  {user.favoriteGenres.map((g) => (
-                    <span key={g} className="badge rounded-pill p-2 px-3" style={{ backgroundColor: "#11DA3E7", color: "#231B59" }}>
-                      {g}
-                    </span>
-                  ))}
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <h6 className="fw-bold small mb-0">Favorite Genres</h6>
                 </div>
+                
+                {/* Géneros actuales */}
+                <div className="d-flex gap-2 flex-wrap mb-3">
+                  {favoriteGenres.length === 0 ? (
+                    <span className="text-muted" style={{ fontSize: 13 }}>No genres added yet</span>
+                  ) : (
+                    favoriteGenres.map((g) => (
+                      <span
+                        key={g}
+                        className="badge rounded-pill p-2 px-3 d-flex align-items-center gap-2"
+                        style={{ backgroundColor: "#11DA3E7", color: "#231B59" }}
+                      >
+                        {g}
+                        <button
+                          type="button"
+                          className="btn-close btn-close-sm"
+                          style={{ fontSize: "10px", opacity: 0.7 }}
+                          onClick={() => removeGenre(g)}
+                          aria-label={`Remove ${g}`}
+                        />
+                      </span>
+                    ))
+                  )}
+                </div>
+
+                {/* Input para añadir géneros */}
+                <div className="d-flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    placeholder="Add a genre..."
+                    value={newGenre}
+                    onChange={(e) => setNewGenre(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addGenre();
+                      }
+                    }}
+                    style={{ borderRadius: 12, fontSize: 13 }}
+                    list="genre-suggestions"
+                  />
+                  <button
+                    className="btn btn-sm"
+                    style={{ backgroundColor: "#231B59", color: "white", borderRadius: 12, minWidth: 80 }}
+                    onClick={addGenre}
+                    disabled={!newGenre.trim()}
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {/* Sugerencias de géneros comunes */}
+                <datalist id="genre-suggestions">
+                  {commonGenres
+                    .filter((g) => !favoriteGenres.includes(g))
+                    .map((g) => (
+                      <option key={g} value={g} />
+                    ))}
+                </datalist>
+
+                {/* Géneros sugeridos (opcionales) */}
+                {favoriteGenres.length < 5 && (
+                  <div className="mt-2">
+                    <small className="text-muted" style={{ fontSize: 11 }}>
+                      Suggestions:{" "}
+                      {commonGenres
+                        .filter((g) => !favoriteGenres.includes(g))
+                        .slice(0, 5)
+                        .map((g, idx, arr) => (
+                          <React.Fragment key={g}>
+                            <button
+                              type="button"
+                              className="btn-link p-0 border-0 bg-transparent text-decoration-none"
+                              style={{ fontSize: 11, color: "#231B59", cursor: "pointer" }}
+                              onClick={() => {
+                                setNewGenre(g);
+                                setTimeout(() => addGenre(), 0);
+                              }}
+                            >
+                              {g}
+                            </button>
+                            {idx < arr.length - 1 && ", "}
+                          </React.Fragment>
+                        ))}
+                    </small>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4">
@@ -344,107 +509,6 @@ export const Profile = () => {
                   <TopCard idx={1} />
                   <TopCard idx={2} />
                 </div>
-
-                {activeSlot !== null && (
-                  <div className="card border-0 shadow-sm p-3 mt-4" style={{ borderRadius: 14, backgroundColor: "#F7F6EF" }}>
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                      <div className="fw-bold" style={{ color: "#231B59" }}>
-                        Search a book for Top {activeSlot + 1}
-                      </div>
-                      <button className="btn btn-sm btn-outline-secondary" onClick={() => setActiveSlot(null)}>
-                        Close
-                      </button>
-                    </div>
-
-                    <div className="d-flex gap-2">
-                      <input
-                        className="form-control"
-                        placeholder="Search by title..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        onKeyDown={(e) => (e.key === "Enter" ? searchBooks() : null)}
-                        style={{ borderRadius: 12 }}
-                      />
-                      <button
-                        className="btn btn-sm"
-                        style={{ backgroundColor: "#231B59", color: "white", borderRadius: 12, minWidth: 92 }}
-                        onClick={searchBooks}
-                        disabled={loadingSearch}
-                      >
-                        {loadingSearch ? "..." : "Search"}
-                      </button>
-                    </div>
-
-                    <div className="mt-3" style={{ maxHeight: 260, overflowY: "auto" }}>
-                      {foundBooks.length === 0 ? (
-                        <div className="text-muted" style={{ fontSize: 13 }}>
-                          Search results will appear here.
-                        </div>
-                      ) : (
-                        <div className="d-flex flex-column gap-2">
-                          {foundBooks.map((b) => (
-                            <button
-                              key={b.id || b.isbn || b.title}
-                              type="button"
-                              onClick={() => pickTop3Book(b)}
-                              className="card border-0 shadow-sm p-2 text-start"
-                              style={{ borderRadius: 12, backgroundColor: "white" }}
-                            >
-                              <div className="d-flex gap-2 align-items-start">
-                                <img
-                                  src={b.thumbnail || "https://via.placeholder.com/60x85"}
-                                  alt={b.title}
-                                  style={{ width: 52, height: 74, objectFit: "cover", borderRadius: 10 }}
-                                />
-                                <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                                  <div
-                                    className="fw-bold"
-                                    style={{
-                                      fontSize: 13,
-                                      color: "#231B59",
-                                      whiteSpace: "nowrap",
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                    }}
-                                    title={b.title}
-                                  >
-                                    {b.title}
-                                  </div>
-                                  <div
-                                    className="text-muted"
-                                    style={{
-                                      fontSize: 12,
-                                      whiteSpace: "nowrap",
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                    }}
-                                    title={(b.authors || []).join(", ")}
-                                  >
-                                    {(b.authors || []).join(", ")}
-                                  </div>
-                                  <div
-                                    className="text-muted"
-                                    style={{
-                                      fontSize: 11,
-                                      whiteSpace: "nowrap",
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                    }}
-                                  >
-                                    {b.isbn ? `ISBN: ${normalizeIsbn(b.isbn)}` : "No ISBN"}
-                                  </div>
-                                </div>
-                                <span className="badge rounded-pill" style={{ backgroundColor: "#231B59" }}>
-                                  Select
-                                </span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -524,6 +588,16 @@ export const Profile = () => {
           </div>
         </div>
       </div>
+
+      <BookLibraryModal
+        isOpen={isBookModalOpen}
+        onClose={() => {
+          setIsBookModalOpen(false);
+          setActiveSlot(null);
+        }}
+        onSelect={handleBookSelect}
+        onAddToLibrary={() => {}} // No necesitamos agregar a biblioteca aquí
+      />
     </div>
   );
 };
