@@ -260,7 +260,7 @@ export const Profile = () => {
   const TopCard = ({ idx }) => {
     const b = top3[idx];
     return (
-      <div className="card border-0 shadow-sm p-3" style={{ borderRadius: 14, backgroundColor: "white" }}>
+      <div className="card border-0 shadow-sm p-3" style={{ borderRadius: 18 }}>
         <div className="d-flex gap-3 align-items-start">
           {b ? (
             <>
@@ -338,7 +338,7 @@ export const Profile = () => {
           <div className="d-flex flex-column gap-2">
             <button
               className="btn btn-sm"
-              style={{ backgroundColor: "#231B59", color: "white", minWidth: 80 }}
+              style={{ minWidth: 80 }}
               onClick={() => {
                 setActiveSlot(idx);
                 setIsBookModalOpen(true);
@@ -365,7 +365,7 @@ export const Profile = () => {
   return (
     <div className="profile-main-container" style={{ backgroundColor: "#E5E4D7", minHeight: "100vh", display: "flex" }}>
       <div className="profile-content-scroll" style={{ flexGrow: 1, padding: "40px" }}>
-        <div className="card border-0 shadow-sm p-4 mb-4" style={{ borderRadius: "15px", backgroundColor: "white" }}>
+        <div className="card border-0 shadow-sm p-4 mb-4" style={{ borderRadius: "28px" }}>
           <div className="d-flex align-items-center text-start">
             <img
               src={profileImg}
@@ -380,7 +380,6 @@ export const Profile = () => {
               <p className="text-muted mb-3">{user.location}</p>
               <button
                 className="btn-wine rounded-pill px-4 py-2"
-                style={{ backgroundColor: "#730202", color: "white", border: "none", fontWeight: "bold" }}
                 onClick={openCloudinaryWidget}
               >
                 <PencilIcon style={{ width: "18px", marginRight: "8px" }} /> Edit Profile
@@ -391,7 +390,7 @@ export const Profile = () => {
 
         <div className="row g-4 text-start">
           <div className="col-md-7">
-            <div className="card border-0 shadow-sm p-4 h-100" style={{ borderRadius: "15px", backgroundColor: "white" }}>
+            <div className="card border-0 shadow-sm p-4 h-100" style={{ borderRadius: "28px" }}>
               <h5 className="fw-bold mb-3" style={{ color: "#231B59" }}>
                 <TagIcon style={{ width: "22px", marginRight: "10px" }} /> About Me
               </h5>
@@ -453,7 +452,7 @@ export const Profile = () => {
                   />
                   <button
                     className="btn btn-sm"
-                    style={{ backgroundColor: "#231B59", color: "white", borderRadius: 12, minWidth: 80 }}
+                    style={{ borderRadius: 12, minWidth: 80 }}
                     onClick={addGenre}
                     disabled={!newGenre.trim()}
                   >
@@ -514,12 +513,12 @@ export const Profile = () => {
           </div>
 
           <div className="col-md-5">
-            <div className="card border-0 shadow-sm p-4 h-100" style={{ borderRadius: "15px", backgroundColor: "white" }}>
+            <div className="card border-0 shadow-sm p-4 h-100" style={{ borderRadius: "28px" }}>
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h5 className="fw-bold mb-0" style={{ color: "#231B59" }}>
                   <BookOpenIcon style={{ width: "22px", marginRight: "10px" }} /> Currently Reading
                 </h5>
-                <button className="btn btn-sm" style={{ backgroundColor: "#231B59", color: "white" }} onClick={fetchLibrary}>
+                <button className="btn btn-sm" onClick={fetchLibrary}>
                   Refresh
                 </button>
               </div>

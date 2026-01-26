@@ -128,9 +128,9 @@ body {
 }
 
 .user-name {
-  font-weight: 500;
+  font-weight: 600;
   color: var(--azul-oscuro);
-  font-size: 14px;
+  font-size: 18px;
 }
 
 .profile-circle {

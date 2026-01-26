@@ -195,6 +195,7 @@ export const Home = () => {
     }
   }, [updateProfile]);
 
+
   const handleAddEvent = (newEvent) => {
     dispatch({ type: "add_event", payload: newEvent });
   };
@@ -368,13 +369,26 @@ export const Home = () => {
                       src="https://i.pravatar.cc/150?img=47"
                       alt="reader avatar"
                       className="rounded-circle border border-white"
-                      style={{ width: "30px", height: "30px", objectFit: "cover" }}
+                      style={{ 
+                        width: "36px", 
+                        height: "36px", 
+                        objectFit: "cover",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                        border: "2px solid white"
+                      }}
                     />
                     <img
                       src="https://i.pravatar.cc/150?img=12"
                       alt="reader avatar"
                       className="rounded-circle border border-white"
-                      style={{ width: "30px", height: "30px", marginLeft: "-10px", objectFit: "cover" }}
+                      style={{ 
+                        width: "36px", 
+                        height: "36px", 
+                        marginLeft: "-12px", 
+                        objectFit: "cover",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                        border: "2px solid white"
+                      }}
                     />
                   </div>
 
@@ -399,9 +413,9 @@ export const Home = () => {
                   }`}
                   style={{ borderRadius: "var(--card-radius)" }}
                 >
-                  <span className="fs-1">📅</span>
-                  <h6 className="fw-bold mt-2 mb-1">Explore Events</h6>
-                  <p className="small text-muted mb-0">Clubs & Meetups</p>
+                  <span className="fs-1" style={{ filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))" }}>📅</span>
+                  <h6 className="fw-bold mt-2 mb-1" style={{ color: "#231B59" }}>Explore Events</h6>
+                  <p className="small text-muted mb-0" style={{ fontSize: "0.85rem" }}>Clubs & Meetups</p>
                 </div>
 
                 <div
@@ -423,13 +437,17 @@ export const Home = () => {
 
           <div className="card-shadow col-12 col-lg-6 right-container">
             <div className="d-flex justify-content-center mb-5">
-              <button className="btn btn-outline-wine rounded-pill px-5 fw-bold" onClick={() => setIsModalOpen(true)}>
+              <button 
+                className="btn btn-outline-wine rounded-pill px-5 py-2 fw-bold" 
+                onClick={() => setIsModalOpen(true)}
+                style={{ fontSize: "1rem", letterSpacing: "0.5px" }}
+              >
                 ✚ Create Your Event
               </button>
             </div>
 
             <div className="d-flex justify-content-between align-items-center mb-4">
-              <h4 className="fw-bold" id="events">
+              <h4 className="fw-bold" id="events" style={{ color: "#231B59", letterSpacing: "0.5px" }}>
                 Upcoming Events
               </h4>
             </div>
@@ -443,7 +461,16 @@ export const Home = () => {
                     }`}
                     style={{ borderRadius: "15px" }}
                   >
-                    <div className="rounded-circle p-3 me-3 fs-4" style={{ backgroundColor: "var(--book-lavender)" }}>
+                    <div 
+                      className="rounded-circle p-3 me-3 fs-4 d-flex align-items-center justify-content-center" 
+                      style={{ 
+                        backgroundColor: "var(--book-lavender)",
+                        width: "56px",
+                        height: "56px",
+                        boxShadow: "0 4px 12px rgba(139, 26, 48, 0.15)",
+                        transition: "all 0.3s ease"
+                      }}
+                    >
                       {ev.icon}
                     </div>
                     <div className="flex-grow-1 text-start">
@@ -458,9 +485,15 @@ export const Home = () => {
               ))}
             </div>
 
-            <button onClick={handleLogout} className="btn btn-outline-wine rounded-pill px-4 fw-bold ms-3 mt-4">
-              Log Out
-            </button>
+            <div className="d-flex justify-content-center mt-4">
+              <button 
+                onClick={handleLogout} 
+                className="btn btn-outline-wine rounded-pill px-4 py-2 fw-bold"
+                style={{ fontSize: "0.9rem" }}
+              >
+                Log Out
+              </button>
+            </div>
 
             <CreateEventModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleAddEvent} />
           </div>
