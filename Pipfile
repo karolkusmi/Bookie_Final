@@ -2,39 +2,33 @@
 name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
+
 [dev-packages]
+
 [packages]
-# Core Framework
 flask = "*"  # O "~=3.1.2" si quieres mantenerte en la v3
 flask-cors = "*"
 flask-migrate = "*"
 flask-sqlalchemy = "*"
 flask-jwt-extended = "*"
-# Database
-# IMPORTANTE: psycopg2 2.8.6 es incompatible con Python 3.14. 
-# Usamos "*" para obtener la última compatible.
 psycopg2-binary = "*" 
 sqlalchemy = "*"
 alembic = "*"
-# Utilities
 python-dotenv = "*"
 cloudinary = "*"
 colorama = "*"
 pyyaml = "*"
-# Stream Chat
 stream-chat = "*"
-# Servers
 gunicorn = "*"  # La versión 20.x es vieja, mejor dejar que actualice
-# Removed or Replaced
-# werkzeug = "==3.0.1"  <-- ELIMINADO: Deja que Flask lo gestione
-# flask-swagger = "==0.2.14" <-- ELIMINADO: Incompatible con Flask 3.
-# Legacy support (si realmente lo necesitas, mantén las versiones, pero relaja el pin)
 flask-admin = "*"
 wtforms = "*"
 mako = "*"
 python-editor = "*"
+google-generativeai = "*"
+
 [requires]
 python_version = "3.14"
+
 [scripts]
 start="flask run -p 3001 -h 0.0.0.0"
 init="flask db init"

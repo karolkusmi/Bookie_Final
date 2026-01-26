@@ -1,0 +1,21 @@
+.ai-chat-page {
+    min-height: calc(100vh - 80px);
+    padding: 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.ai-chat-page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    height: calc(100vh - 120px);
+}
+
+@media (max-width: 768px) {
+    .ai-chat-page {
+        padding: 10px;
+    }
+
+    .ai-chat-page-container {
+        height: calc(100vh - 100px);
+    }
+}

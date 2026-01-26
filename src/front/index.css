@@ -84,3 +84,56 @@ body {
   position: relative;
   z-index: 1;
 }
+
+/* ===== HEADER COMPONENTS ===== */
+.header-logo-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--azul-oscuro);
+}
+
+.header-right-side {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-icon-link,
+.header-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.header-icon-svg {
+  width: 24px;
+  height: 24px;
+  color: var(--azul-oscuro);
+}
+
+.user-profile-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-name {
+  font-weight: 500;
+  color: var(--azul-oscuro);
+  font-size: 14px;
+}
+
+.profile-circle {
+  display: flex;
+  align-items: center;
+}

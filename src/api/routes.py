@@ -2,7 +2,7 @@
 """
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
-from flask import make_response, request, jsonify, url_for, Blueprint
+from flask import make_response, request, jsonify, url_for, Blueprint, Response, stream_with_context
 import os
 import jwt
 from api.models import Event, db, User
@@ -15,6 +15,8 @@ from flask import request, jsonify
 from api.utils_scripts.auth_utils import create_refresh_token, verify_token, create_token
 import requests
 from api.models import db, User, Book
+import json
+import random
 
 
 api = Blueprint('api', __name__)
@@ -614,5 +616,239 @@ def remove_book_from_library(user_id, isbn):
     db.session.commit()
 
     return jsonify({"msg": "Book removed from library"}), 200
+
+
+#----RUTAS DE CHAT CON IA----#
+
+@api.route("/ai-chat", methods=["POST"])
+def ai_chat():
+    """
+    Endpoint para chat con IA que recomienda libros.
+    Usa streaming para enviar respuestas en tiempo real.
+    """
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"message": "Missing or invalid Authorization header"}), 401
+    
+    token = auth_header.split(" ")[1]
+    user_id = verify_token(token)
+    
+    if not user_id:
+        return jsonify({"message": "Invalid or expired token"}), 401
+    
+    data = request.get_json() or {}
+    user_message = data.get("message", "").strip()
+    
+    if not user_message:
+        return jsonify({"message": "Message is required"}), 400
+    
+    # Verificar si Gemini está configurado
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        return jsonify({"message": "GEMINI_API_KEY not configured"}), 500
+    
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=gemini_api_key)
+        
+        # Obtener historial de conversación si existe
+        conversation_history = data.get("history", [])
+        
+        # Construir el prompt del sistema y la conversación
+        system_prompt = """Eres un asistente virtual especializado en recomendar libros. 
+        Tu objetivo es ayudar a los usuarios a encontrar libros que disfruten basándote en sus preferencias, 
+        géneros favoritos, estados de ánimo, o cualquier otra información que compartan.
+        
+        Sé amigable, entusiasta y específico en tus recomendaciones. Si el usuario menciona un libro, 
+        autor o género, úsalo como referencia para sugerir libros similares.
+        
+        Responde siempre en español y de forma conversacional."""
+        
+        # Listar modelos disponibles y usar el primero que soporte generateContent
+        try:
+            available_models = genai.list_models()
+            model_name = None
+            
+            # Buscar un modelo que soporte generateContent
+            for m in available_models:
+                if 'generateContent' in m.supported_generation_methods:
+                    # Preferir modelos que contengan 'gemini' en el nombre
+                    if 'gemini' in m.name.lower():
+                        model_name = m.name
+                        break
+            
+            # Si no encontramos uno con 'gemini', usar el primero disponible
+            if model_name is None:
+                for m in available_models:
+                    if 'generateContent' in m.supported_generation_methods:
+                        model_name = m.name
+                        break
+            
+            if model_name is None:
+                available_names = [m.name for m in available_models]
+                raise Exception(f"No se encontró ningún modelo disponible que soporte generateContent. Modelos disponibles: {available_names}")
+            
+            # Crear el modelo usando el nombre completo (incluye 'models/')
+            model = genai.GenerativeModel(model_name)
+            
+        except Exception as list_error:
+            # Si falla listar modelos, intentar con nombres conocidos
+            model_names = ['gemini-pro', 'gemini-1.0-pro', 'gemini-1.5-pro']
+            model = None
+            last_error = str(list_error)
+            
+            for model_name in model_names:
+                try:
+                    model = genai.GenerativeModel(model_name)
+                    break
+                except Exception as e:
+                    last_error = str(e)
+                    continue
+            
+            if model is None:
+                raise Exception(f"No se pudo inicializar ningún modelo. Error al listar: {str(list_error)}. Errores al probar modelos: {last_error}")
+        
+        # Construir el contexto de la conversación
+        conversation_text = system_prompt + "\n\n"
+        
+        # Agregar historial de conversación
+        for msg in conversation_history:
+            role = "Usuario" if msg.get("role") == "user" else "Asistente"
+            conversation_text += f"{role}: {msg.get('content', '')}\n\n"
+        
+        # Agregar el mensaje actual del usuario
+        conversation_text += f"Usuario: {user_message}\n\nAsistente:"
+        
+        # Crear stream de respuesta
+        try:
+            response = model.generate_content(
+                conversation_text,
+                stream=True,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.7,
+                    max_output_tokens=500,
+                )
+            )
+        except Exception as e:
+            return jsonify({"message": f"Error generating response: {str(e)}"}), 500
+        
+        def generate():
+            try:
+                for chunk in response:
+                    if hasattr(chunk, 'text') and chunk.text:
+                        yield f"data: {json.dumps({'content': chunk.text})}\n\n"
+                yield "data: [DONE]\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                yield "data: [DONE]\n\n"
+        
+        return Response(
+            stream_with_context(generate()),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'X-Accel-Buffering': 'no',
+                'Connection': 'keep-alive'
+            }
+        )
+        
+    except ImportError:
+        return jsonify({"message": "google-generativeai library not installed"}), 500
+    except Exception as e:
+        return jsonify({"message": f"Error in AI chat: {str(e)}"}), 500
+
+
+@api.route("/ai-chat/random-book", methods=["GET"])
+def get_random_book():
+    """
+    Obtiene un libro aleatorio de Google Books API para la función "Sorpréndeme"
+    """
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"message": "Missing or invalid Authorization header"}), 401
+    
+    token = auth_header.split(" ")[1]
+    user_id = verify_token(token)
+    
+    if not user_id:
+        return jsonify({"message": "Invalid or expired token"}), 401
+    
+    # Lista de términos de búsqueda aleatorios para obtener libros diversos
+    search_terms = [
+        "best seller", "novela", "ciencia ficción", "fantasía", "misterio", 
+        "romance", "historia", "biografía", "aventura", "thriller",
+        "literatura", "clásico", "contemporáneo", "drama", "comedia"
+    ]
+    
+    # Seleccionar término aleatorio
+    search_term = random.choice(search_terms)
+    
+    url = "https://www.googleapis.com/books/v1/volumes"
+    params = {
+        "q": search_term,
+        "maxResults": 40,
+        "langRestrict": "es",
+        "printType": "books",
+        "orderBy": "relevance"
+    }
+    
+    try:
+        r = requests.get(
+            url,
+            params=params,
+            timeout=10,
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
+        
+        if r.status_code != 200:
+            return jsonify({
+                "message": "Error fetching books from Google Books",
+                "status_code": r.status_code
+            }), 502
+        
+        data = r.json()
+        items = data.get("items", []) or []
+        
+        if not items:
+            return jsonify({"message": "No books found"}), 404
+        
+        # Seleccionar un libro aleatorio de los resultados
+        random_item = random.choice(items)
+        vi = random_item.get("volumeInfo", {}) or {}
+        img = (vi.get("imageLinks", {}) or {})
+        
+        # Obtener ISBN
+        isbn = None
+        identifiers = vi.get("industryIdentifiers", []) or []
+        for ident in identifiers:
+            if ident.get("type") in ["ISBN_13", "ISBN_10"]:
+                isbn = ident.get("identifier")
+                break
+            if not isbn:
+                for ident in identifiers:
+                    if "ISBN" in (ident.get("type", "") or ""):
+                        isbn = ident.get("identifier")
+                        break
+        
+        book_data = {
+            "id": random_item.get("id"),
+            "title": vi.get("title"),
+            "authors": vi.get("authors", []),
+            "publishedDate": vi.get("publishedDate"),
+            "thumbnail": img.get("thumbnail") or img.get("smallThumbnail"),
+            "isbn": isbn,
+            "description": vi.get("description", ""),
+            "categories": vi.get("categories", []),
+            "pageCount": vi.get("pageCount"),
+            "language": vi.get("language")
+        }
+        
+        return jsonify(book_data), 200
+        
+    except requests.RequestException as e:
+        return jsonify({
+            "message": "Error connecting to Google Books",
+            "error": str(e)
+        }), 502
 
 

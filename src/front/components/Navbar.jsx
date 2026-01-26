@@ -37,6 +37,7 @@ export const Navbar = () => {
     { label: "Home", to: "/home", Icon: HomeIcon },
     { label: "Events", to: "/home#events", Icon: CalendarIcon },
     { label: "Chat", to: "/chat", Icon: UsersIcon },
+    { label: "Chat IA", to: "/ai-chat", Icon: UsersIcon },
     { label: "Profile", to: "/profile", Icon: UserCircleIcon },
     { label: "Aboutus", to: "/aboutus", Icon: IdentificationIcon },
   ];

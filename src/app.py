@@ -3,6 +3,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 import os
+from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
 from flask import Flask, request, jsonify, url_for, send_from_directory
@@ -12,6 +13,9 @@ from api.models import db
 from api.routes import api
 from api.admin import setup_admin
 from api.commands import setup_commands
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 # from models import Person
 ENV = "development" if os.getenv("FLASK_DEBUG") == "1" else "production"
