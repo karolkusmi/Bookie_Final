@@ -195,6 +195,19 @@ export const Home = () => {
     }
   }, [updateProfile]);
 
+  useEffect(() => {
+    const syncBook = () => {
+      const saved = localStorage.getItem("selected_book");
+      if (!saved) {
+        setSelectedBook(null);
+      } else {
+        setSelectedBook(JSON.parse(saved));
+      }
+    };
+    window.addEventListener("local-storage-changed", syncBook);
+    return () => window.removeEventListener("local-storage-changed", syncBook);
+  }, []);
+
 
   const handleAddEvent = (newEvent) => {
     dispatch({ type: "add_event", payload: newEvent });
@@ -369,9 +382,9 @@ export const Home = () => {
                       src="https://i.pravatar.cc/150?img=47"
                       alt="reader avatar"
                       className="rounded-circle border border-white"
-                      style={{ 
-                        width: "36px", 
-                        height: "36px", 
+                      style={{
+                        width: "36px",
+                        height: "36px",
                         objectFit: "cover",
                         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
                         border: "2px solid white"
@@ -381,10 +394,10 @@ export const Home = () => {
                       src="https://i.pravatar.cc/150?img=12"
                       alt="reader avatar"
                       className="rounded-circle border border-white"
-                      style={{ 
-                        width: "36px", 
-                        height: "36px", 
-                        marginLeft: "-12px", 
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        marginLeft: "-12px",
                         objectFit: "cover",
                         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
                         border: "2px solid white"
@@ -408,9 +421,8 @@ export const Home = () => {
 
               <div className="d-flex gap-3">
                 <div
-                  className={`card border-0 p-4 text-center shadow-sm flex-grow-1 bg-lavender-card mb-card ${
-                    enableBorderGlow ? "mb-border-glow" : ""
-                  }`}
+                  className={`card border-0 p-4 text-center shadow-sm flex-grow-1 bg-lavender-card mb-card ${enableBorderGlow ? "mb-border-glow" : ""
+                    }`}
                   style={{ borderRadius: "var(--card-radius)" }}
                 >
                   <span className="fs-1" style={{ filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))" }}>📅</span>
@@ -437,8 +449,8 @@ export const Home = () => {
 
           <div className="card-shadow col-12 col-lg-6 right-container">
             <div className="d-flex justify-content-center mb-5">
-              <button 
-                className="btn btn-outline-wine rounded-pill px-5 py-2 fw-bold" 
+              <button
+                className="btn btn-outline-wine rounded-pill px-5 py-2 fw-bold"
                 onClick={() => setIsModalOpen(true)}
                 style={{ fontSize: "1rem", letterSpacing: "0.5px" }}
               >
@@ -456,14 +468,13 @@ export const Home = () => {
               {(store.eventGlobalList.length === 0 ? eventList : store.eventGlobalList).map((ev, index) => (
                 <div className="col-md-6" key={index}>
                   <div
-                    className={`card border-0 shadow-sm p-3 d-flex flex-row align-items-center event-card mb-card ${
-                      enableBorderGlow ? "mb-border-glow" : ""
-                    }`}
+                    className={`card border-0 shadow-sm p-3 d-flex flex-row align-items-center event-card mb-card ${enableBorderGlow ? "mb-border-glow" : ""
+                      }`}
                     style={{ borderRadius: "15px" }}
                   >
-                    <div 
-                      className="rounded-circle p-3 me-3 fs-4 d-flex align-items-center justify-content-center" 
-                      style={{ 
+                    <div
+                      className="rounded-circle p-3 me-3 fs-4 d-flex align-items-center justify-content-center"
+                      style={{
                         backgroundColor: "var(--book-lavender)",
                         width: "56px",
                         height: "56px",
@@ -486,8 +497,8 @@ export const Home = () => {
             </div>
 
             <div className="d-flex justify-content-center mt-4">
-              <button 
-                onClick={handleLogout} 
+              <button
+                onClick={handleLogout}
                 className="btn btn-outline-wine rounded-pill px-4 py-2 fw-bold"
                 style={{ fontSize: "0.9rem" }}
               >
