@@ -1,6 +1,7 @@
 import { useUser } from "./UserContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import PillNav from "./PillNav";
+import LogoImg from "../assets/img/Logo.png";
 
 export const Header = () => {
     const { profileImg, userData } = useUser();
@@ -24,21 +25,21 @@ export const Header = () => {
     return (
         <header className="top-header">
             <div className="header-logo-section">
+                <img 
+                    src={LogoImg} 
+                    alt="Bookie Logo" 
+                    className="header-user-logo"
+                />
                 <span className="brand-title">{username}</span>
             </div>
 
             <div className="header-right-side">
                 <button
                     type="button"
-                    className="ai-chat-icon-btn"
+                    className="ai-chat-btn"
                     onClick={() => navigate("/ai-chat")}
-                    aria-label="AI Chat"
                 >
-                    <img
-                        className="ai-chat-icon-img"
-                        src="/ai-chat-icon.png"
-                        alt="AI Chat"
-                    />
+                    AI Chat
                 </button>
                 <PillNav
                     logo={safeAvatar}

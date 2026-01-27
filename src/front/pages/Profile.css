@@ -85,7 +85,7 @@
   box-shadow: 0 2px 10px rgba(139, 26, 48, 0.3);
 }
 
-/* Botones generales con estilo wine */
+
 .btn[style*="background-color: #231B59"],
 .btn[style*="background-color: #231b59"] {
   background: linear-gradient(135deg, #231B59 0%, #4a3d7a 100%) !important;
