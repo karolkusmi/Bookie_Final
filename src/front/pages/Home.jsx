@@ -195,6 +195,19 @@ export const Home = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const syncBook = () => {
+      const saved = localStorage.getItem("selected_book");
+      if (!saved) {
+        setSelectedBook(null);
+      } else {
+        setSelectedBook(JSON.parse(saved));
+      }
+    };
+    window.addEventListener("local-storage-changed", syncBook);
+    return () => window.removeEventListener("local-storage-changed", syncBook);
+  }, []);
+
 
   const handleAddEvent = (newEvent) => {
     dispatch({ type: "add_event", payload: newEvent });

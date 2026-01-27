@@ -1,8 +1,8 @@
 export const initialStore=()=>{
   return{
-    message: null,
     favorites: [],
 
+    selectedBook: JSON.parse(localStorage.getItem("selected_book")) || null,
     initialEventList: [
       { title: "Classic Novel Club", date: "May 25 • 6:00 PM", icon: "📖" },
       { title: "Sci‑Fi Readers Meetup", date: "May 28 • 7:30 PM", icon: "🚀" },
@@ -25,20 +25,48 @@ export default function storeReducer(store, action = {}) {
 
 
 case 'add_favorite':
+const exists = store.favorites.some(fav => 
+        (fav.isbn && fav.isbn === action.payload.isbn) || 
+        fav.title === action.payload.title
+    );
 
-      if (store.favorites.find(fav => fav.title === action.payload.title)) return store;
-      return {
+if (exists) {
+        console.warn("Este libro ya está en tus favoritos");
+        return store;
+    }
+
+    return {
         ...store,
         favorites: [...store.favorites, action.payload]
+    };
+
+      case 'set_selected_book':
+      localStorage.setItem("selected_book", JSON.stringify(action.payload));
+      return {
+        ...store,
+        selectedBook: action.payload
       };
 
 case 'delete_favorite':
+
+
+      const updatedFavorites = store.favorites.filter((_, index) => index !== action.payload);
+
+      const bookBeingRemoved = store.favorites[action.payload];
+      let newSelected = store.selectedBook;
+    
+    if (store.selectedBook && bookBeingRemoved && store.selectedBook.title === bookBeingRemoved.title) {
+        newSelected = null;
+        localStorage.removeItem("selected_book");
+    }
+
       return {
         ...store,
-        favorites: store.favorites.filter((item, index) => index !== action.payload)
+        favorites: updatedFavorites,
+        selectedBook: newSelectedBook
       };
 
     default:
-      throw Error('Unknown action.');
+      return store;
   }    
 };
