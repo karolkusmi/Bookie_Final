@@ -8,11 +8,6 @@ export const Header = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-<<<<<<< HEAD
-    const savedUser = localStorage.getItem("user_data");
-    const userData = savedUser ? JSON.parse(savedUser) : null;
-    const username = userData?.username || "Guest";
-=======
     const saved = JSON.parse(localStorage.getItem("user_data") || "null");
     const username = userData?.username || saved?.username || saved?.email || "User";
 
@@ -26,7 +21,6 @@ export const Header = () => {
         { href: "/events", label: "Events" },
         { href: "/aboutus", label: "About Us" },
     ];
->>>>>>> 9681cacd3d99a11349e92fef0e5fce4f02b3be29
 
     return (
         <header className="top-header">
