@@ -1,0 +1,21 @@
+DATABASE_URL=postgresql://neondb_owner:npg_tKNrD57mxFWR@ep-twilight-sky-ag6c2kp7-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+FLASK_APP_KEY="any key works"
+FLASK_APP=src/app.py
+FLASK_DEBUG=1
+DEBUG=TRUE
+
+#Front-End Variables
+VITE_BASENAME=/
+VITE_BACKEND_URL=http://localhost:3001/
+
+
+VITE_STREAM_API_KEY=3kmhfwk7eqh2
+STREAM_API_KEY=3kmhfwk7eqh2
+STREAM_API_SECRET=pcas973vej8kg8pzh5fr5zn7nea3jtp83yhvhu7jx6722esffuqxfbxs8vm9had6
+
+VITE_STREAM_AI_API_KEY=j5vj7fzcecq4
+STREAM_AI_API_KEY=j5vj7fzcecq4
+STREAM_AI_API_SECRET=66fpxbzkn59874z9t838nvzng5zzsgpxtv2ryvhhnjbdgcpcwbhp2g2ux2accdxz
+
+GOOGLE_AI_API_KEY=AIzaSyDwq72RVX5TtXu9Oamc5rm-DbkP9N7rGE8
+GEMINI_API_KEY=AIzaSyDwq72RVX5TtXu9Oamc5rm-DbkP9N7rGE8
