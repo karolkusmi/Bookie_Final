@@ -29,6 +29,9 @@ pyyaml = "*"
 # Stream Chat
 stream-chat = "*"
 
+# AI (Gemini)
+google-generativeai = "*"
+
 # Servers
 gunicorn = "*"  # La versión 20.x es vieja, mejor dejar que actualice
 

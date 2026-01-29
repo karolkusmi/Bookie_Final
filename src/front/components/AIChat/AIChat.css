@@ -109,6 +109,25 @@
     margin-bottom: 0;
 }
 
+.message-synopsis {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.message-synopsis p {
+    margin: 0 0 6px 0;
+}
+
+.message-info {
+    font-size: 0.95em;
+    color: #555;
+}
+
+.message-info p {
+    margin: 0 0 4px 0;
+}
+
 /* Typing indicator */
 .typing-indicator {
     display: flex;

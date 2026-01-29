@@ -728,15 +728,19 @@ def ai_chat():
         # Obtener historial de conversación si existe
         conversation_history = data.get("history", [])
         
-        # Construir el prompt del sistema y la conversación
-        system_prompt = """Eres un asistente virtual especializado en recomendar libros. 
-        Tu objetivo es ayudar a los usuarios a encontrar libros que disfruten basándote en sus preferencias, 
-        géneros favoritos, estados de ánimo, o cualquier otra información que compartan.
-        
-        Sé amigable, entusiasta y específico en tus recomendaciones. Si el usuario menciona un libro, 
-        autor o género, úsalo como referencia para sugerir libros similares.
-        
-        Responde siempre en español y de forma conversacional."""
+        # Prompt del sistema: respuestas directas, sinopsis primero y luego datos del libro
+        system_prompt = """Eres un asistente de recomendación de libros. Responde SIEMPRE en español, de forma directa y concisa.
+
+FORMATO OBLIGATORIO para cada recomendación:
+1) Sinopsis: un párrafo breve (2-4 frases) que resuma por qué ese libro encaja con lo que pide el usuario. Sin rodeos.
+2) Línea separadora: escribe exactamente "---"
+3) Datos del libro en líneas cortas:
+   • Título: [nombre del libro]
+   • Autor: [nombre]
+   • Género: [género(s)]
+   (Opcional: Año o páginas si aporta.)
+
+No des introducciones largas. No repitas la pregunta del usuario. Ve al grano con la sinopsis y luego la ficha."""
         
         # Listar modelos disponibles y usar el primero que soporte generateContent
         try:
@@ -799,8 +803,8 @@ def ai_chat():
                 conversation_text,
                 stream=True,
                 generation_config=genai.types.GenerationConfig(
-                    temperature=0.7,
-                    max_output_tokens=500,
+                    temperature=0.6,
+                    max_output_tokens=1024,
                 )
             )
         except Exception as e:
@@ -827,7 +831,9 @@ def ai_chat():
         )
         
     except ImportError:
-        return jsonify({"message": "google-generativeai library not installed"}), 500
+        return jsonify({
+            "message": "google-generativeai library not installed. Run: pipenv install google-generativeai (or install_genai.bat) and restart the backend with: pipenv run flask run -p 3001"
+        }), 500
     except Exception as e:
         return jsonify({"message": f"Error in AI chat: {str(e)}"}), 500
 

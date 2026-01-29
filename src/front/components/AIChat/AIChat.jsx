@@ -15,7 +15,7 @@ const AIChat = () => {
     const inputRef = useRef(null);
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
-    const API_BASE = `${backendUrl}/api`;
+    const API_BASE = `${backendUrl}api`;
 
     // Auto-scroll al final de los mensajes
     const scrollToBottom = () => {
@@ -75,45 +75,58 @@ const AIChat = () => {
                 throw new Error(errorData.message || "Error al comunicarse con la IA");
             }
 
-            // Leer stream de respuesta
+            // Stream con buffer: procesar solo líneas completas para chunks fragmentados
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let assistantMessage = {
-                role: "assistant",
-                content: ""
-            };
+            let buffer = "";
 
-            setMessages(prev => [...prev, assistantMessage]);
+            setMessages(prev => [...prev, { role: "assistant", content: "" }]);
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = decoder.decode(value);
-                const lines = chunk.split("\n");
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() ?? ""; // guardar línea incompleta
 
                 for (const line of lines) {
-                    if (line.startsWith("data: ")) {
-                        const data = line.slice(6);
-                        if (data === "[DONE]") {
-                            break;
+                    if (!line.startsWith("data: ")) continue;
+                    const data = line.slice(6).trim();
+                    if (data === "[DONE]") continue;
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.content) {
+                            setMessages(prev => {
+                                const next = [...prev];
+                                const last = next[next.length - 1];
+                                next[next.length - 1] = {
+                                    ...last,
+                                    content: last.content + parsed.content
+                                };
+                                return next;
+                            });
                         }
-                        try {
-                            const parsed = JSON.parse(data);
-                            if (parsed.content) {
-                                assistantMessage.content += parsed.content;
-                                setMessages(prev => {
-                                    const newMessages = [...prev];
-                                    newMessages[newMessages.length - 1] = {
-                                        ...assistantMessage
-                                    };
-                                    return newMessages;
-                                });
-                            }
-                        } catch (e) {
-                            // Ignorar errores de parsing
-                        }
+                    } catch (_) {
+                        // ignorar líneas no JSON
                     }
+                }
+            }
+            // Procesar resto del buffer si quedó algo
+            if (buffer.trim().startsWith("data: ")) {
+                const data = buffer.slice(6).trim();
+                if (data !== "[DONE]") {
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.content) {
+                            setMessages(prev => {
+                                const next = [...prev];
+                                const last = next[next.length - 1];
+                                next[next.length - 1] = { ...last, content: last.content + parsed.content };
+                                return next;
+                            });
+                        }
+                    } catch (_) {}
                 }
             }
         } catch (error) {
@@ -209,9 +222,24 @@ const AIChat = () => {
                             {msg.role === "user" ? "👤" : "🤖"}
                         </div>
                         <div className="message-content">
-                            {msg.content.split("\n").map((line, i) => (
-                                <p key={i}>{line}</p>
-                            ))}
+                            {msg.role === "assistant" && msg.content.includes("---") ? (
+                                <>
+                                    <div className="message-synopsis">
+                                        {msg.content.split("---")[0].trim().split("\n").map((line, i) => (
+                                            <p key={i}>{line}</p>
+                                        ))}
+                                    </div>
+                                    <div className="message-info">
+                                        {msg.content.split("---").slice(1).join("---").trim().split("\n").filter(Boolean).map((line, i) => (
+                                            <p key={i}>{line.trim()}</p>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                msg.content.split("\n").map((line, i) => (
+                                    <p key={i}>{line}</p>
+                                ))
+                            )}
                         </div>
                     </div>
                 ))}
