@@ -470,6 +470,30 @@ export const Home = () => {
               ))}
             </div>
 
+            {/* --- INICIO WIDGET SPOTIFY --- */}
+            <div className="mt-4 mb-4">
+              <div
+                className={`card border-0 shadow-sm p-3 mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
+                style={{ borderRadius: "15px", overflow: "hidden" }}
+              >
+                <h6 className="fw-bold mb-3" style={{ color: "#231B59" }}>Música para leer 🎵</h6>
+                <iframe
+                  data-testid="embed-iframe"
+                  style={{ borderRadius: "12px", border: "0" }}
+                  src="https://open.spotify.com/embed/playlist/37i9dQZF1DWZkMGGysxknj?utm_source=generator"
+                  width="100%"
+                  height="152"
+                  allowFullScreen=""
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="lazy"
+                ></iframe>
+              </div>
+            </div>
+            {/* --- FIN WIDGET SPOTIFY --- */}
+
+
+
+
             <div className="d-flex justify-content-center mt-4">
               <button
                 onClick={handleLogout}
