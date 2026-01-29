@@ -19,6 +19,7 @@ export const Home = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("prologue"); // "prologue" | "library"
   const [selectedBook, setSelectedBook] = useState(null);
 
   const [uiMessage, setUiMessage] = useState(null);
@@ -208,27 +209,25 @@ export const Home = () => {
     return () => window.removeEventListener("local-storage-changed", syncBook);
   }, []);
 
-
   const handleAddEvent = (newEvent) => {
     dispatch({ type: "add_event", payload: newEvent });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user_data");
-    localStorage.removeItem("stream_token");
-    localStorage.removeItem("selected_book");
-    localStorage.removeItem("token");
-    localStorage.removeItem("selectedBook");
-    localStorage.removeItem("userAvatar");
-    navigate("/");
-  };
-
   const handleSelectBook = (book) => {
-    setSelectedBook(book);
-    localStorage.setItem("selected_book", JSON.stringify(book));
+    const mapped = {
+      id: book.id,
+      title: book.title,
+      authors: Array.isArray(book.authors) ? book.authors : [],
+      publisher: book.publisher || null,
+      thumbnail: book.thumbnail || null,
+      isbn: normalizeIsbn(book.isbn),
+    };
+
+    setSelectedBook(mapped);
+    localStorage.setItem("selected_book", JSON.stringify(mapped));
     setUiMessage(null);
+
+    window.dispatchEvent(new Event("local-storage-changed"));
   };
 
   const makeChannelIdFromTitle = (title) => {
@@ -322,6 +321,17 @@ export const Home = () => {
     }
   };
 
+  const openPrologue = () => {
+    setModalMode("prologue");
+    setIsLibraryOpen(true);
+  };
+
+  const openLibrary = (e) => {
+    e.stopPropagation();
+    setModalMode("library");
+    setIsLibraryOpen(true);
+  };
+
   return (
     <div className="container-fluid home-fixed-wrap" style={{ backgroundColor: "var(--book-bg)" }}>
       <div
@@ -348,29 +358,35 @@ export const Home = () => {
               )}
 
               <div className="d-flex gap-3 flex-wrap">
-                <button
-                  type="button"
-                  className={`card border-0 shadow-sm p-3 text-center mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
-                  style={{ borderRadius: "var(--card-radius)", width: "180px", cursor: "pointer" }}
-                  onClick={() => setIsLibraryOpen(true)}
-                >
-                  <div className="book-card-img shadow-sm">
-                    <img
-                      src={selectedBook?.thumbnail || portadaLibro}
-                      alt={selectedBook?.title || "Book cover"}
-                      className="w-100 h-100 object-fit-cover"
-                      onError={(e) => (e.currentTarget.style.display = "none")}
-                    />
-                  </div>
-
-                  <span className="fw-bold small">{selectedBook?.title || "Your Book !!"}</span>
-
-                  {selectedBook?.isbn && (
-                    <div className="text-muted" style={{ fontSize: "0.7rem" }}>
-                      ISBN: {selectedBook.isbn}
+                <div className="home-book-wrap">
+                  <button
+                    type="button"
+                    className={`card border-0 shadow-sm p-3 text-center mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
+                    style={{ borderRadius: "var(--card-radius)", width: "180px", cursor: "pointer" }}
+                    onClick={openPrologue}
+                  >
+                    <div className="book-card-img shadow-sm">
+                      <img
+                        src={selectedBook?.thumbnail || portadaLibro}
+                        alt={selectedBook?.title || "Book cover"}
+                        className="w-100 h-100 object-fit-cover"
+                        onError={(e) => (e.currentTarget.style.display = "none")}
+                      />
                     </div>
-                  )}
-                </button>
+
+                    <span className="fw-bold small">{selectedBook?.title || "Your Book !!"}</span>
+
+                    {selectedBook?.isbn && (
+                      <div className="text-muted" style={{ fontSize: "0.7rem" }}>
+                        ISBN: {selectedBook.isbn}
+                      </div>
+                    )}
+                  </button>
+
+                  <button type="button" className="home-plus-btn" onClick={openLibrary} aria-label="Add book">
+                    +
+                  </button>
+                </div>
 
                 <div
                   className={`card border-0 shadow-sm p-4 flex-grow-1 mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
@@ -388,7 +404,7 @@ export const Home = () => {
                         height: "36px",
                         objectFit: "cover",
                         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                        border: "2px solid white"
+                        border: "2px solid white",
                       }}
                     />
                     <img
@@ -401,7 +417,7 @@ export const Home = () => {
                         marginLeft: "-12px",
                         objectFit: "cover",
                         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                        border: "2px solid white"
+                        border: "2px solid white",
                       }}
                     />
                   </div>
@@ -422,13 +438,20 @@ export const Home = () => {
 
               <div className="d-flex gap-3">
                 <div
-                  className={`card border-0 p-4 text-center shadow-sm flex-grow-1 bg-lavender-card mb-card ${enableBorderGlow ? "mb-border-glow" : ""
-                    }`}
+                  className={`card border-0 p-4 text-center shadow-sm flex-grow-1 bg-lavender-card mb-card ${
+                    enableBorderGlow ? "mb-border-glow" : ""
+                  }`}
                   style={{ borderRadius: "var(--card-radius)" }}
                 >
-                  <span className="fs-1" style={{ filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))" }}>📅</span>
-                  <h6 className="fw-bold mt-2 mb-1" style={{ color: "#231B59" }}>Explore Events</h6>
-                  <p className="small text-muted mb-0" style={{ fontSize: "0.85rem" }}>Clubs & Meetups</p>
+                  <span className="fs-1" style={{ filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))" }}>
+                    📅
+                  </span>
+                  <h6 className="fw-bold mt-2 mb-1" style={{ color: "#231B59" }}>
+                    Explore Events
+                  </h6>
+                  <p className="small text-muted mb-0" style={{ fontSize: "0.85rem" }}>
+                    Clubs & Meetups
+                  </p>
                 </div>
 
                 <div
@@ -469,8 +492,9 @@ export const Home = () => {
               {(store.eventGlobalList.length === 0 ? eventList : store.eventGlobalList).map((ev, index) => (
                 <div className="col-md-6" key={index}>
                   <div
-                    className={`card border-0 shadow-sm p-3 d-flex flex-row align-items-center event-card mb-card ${enableBorderGlow ? "mb-border-glow" : ""
-                      }`}
+                    className={`card border-0 shadow-sm p-3 d-flex flex-row align-items-center event-card mb-card ${
+                      enableBorderGlow ? "mb-border-glow" : ""
+                    }`}
                     style={{ borderRadius: "15px" }}
                   >
                     <div
@@ -480,7 +504,7 @@ export const Home = () => {
                         width: "56px",
                         height: "56px",
                         boxShadow: "0 4px 12px rgba(139, 26, 48, 0.15)",
-                        transition: "all 0.3s ease"
+                        transition: "all 0.3s ease",
                       }}
                     >
                       {ev.icon}
@@ -505,6 +529,8 @@ export const Home = () => {
           isOpen={isLibraryOpen}
           onClose={() => setIsLibraryOpen(false)}
           onSelect={handleSelectBook}
+          selectedBook={selectedBook}
+          mode={modalMode}
           onAddToLibrary={addBookToLibrary}
         />
       </div>
