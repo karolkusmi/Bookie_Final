@@ -22,7 +22,6 @@ export const getStreamClient = () => {
 };
 
 /**
-<<<<<<< HEAD
  * Normalize ISBN by removing dashes and spaces
  * @param {string} isbn - The ISBN to normalize
  * @returns {string} Normalized ISBN
@@ -112,9 +111,7 @@ export const disconnectUser = async () => {
 };
 
 /**
-<<<<<<< HEAD
  * Create or join a channel for a book discussion using ISBN
- * Uses the backend API to create/join channels (server has proper permissions)
  * @param {Object} book - The book object with isbn, title, thumbnail, authors
  * @returns {Promise<Object>} The channel object
  */
@@ -135,7 +132,6 @@ export const createOrJoinBookChannelByIsbn = async (book) => {
     throw new Error("Book must have a valid ISBN to create a chat");
   }
 
-  // Use backend API to create/join channel by ISBN
   const response = await fetch(`${BACKEND_URL}/chat/create-or-join-channel-by-isbn`, {
     method: "POST",
     headers: {
@@ -158,7 +154,6 @@ export const createOrJoinBookChannelByIsbn = async (book) => {
   const data = await response.json();
   const channelId = data.channel_id;
 
-  // Now watch the channel from the client
   const channel = client.channel("messaging", channelId);
   await channel.watch();
 
@@ -167,16 +162,9 @@ export const createOrJoinBookChannelByIsbn = async (book) => {
 
 /**
  * Create or join a channel for a book discussion (legacy - by title)
- * Uses the backend API to create/join channels (server has proper permissions)
  * @param {string} bookTitle - The book being discussed
  * @returns {Promise<Object>} The channel object
- * @deprecated Use createOrJoinBookChannelByIsbn instead
-=======
- * Create or join a channel for a book discussion
- * Uses the backend API to create/join channels (server has proper permissions)
- * @param {string} bookTitle - The book being discussed
- * @returns {Promise<Object>} The channel object
->>>>>>> origin/german_branch
+ * @deprecated Use createOrJoinBookChannelByIsbn for same-book-by-ISBN
  */
 export const createOrJoinBookChannel = async (bookTitle) => {
   const client = getStreamClient();

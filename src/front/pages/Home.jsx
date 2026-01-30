@@ -285,7 +285,7 @@ export const Home = () => {
       return;
     }
 
-    const channelId = makeChannelIdFromTitle(selectedBook.title);
+    const channelId = makeChannelIdFromIsbn(isbn);
     if (!channelId) {
       setUiMessage({ type: "danger", text: "No se pudo generar el canal para este libro." });
       return;
@@ -294,37 +294,16 @@ export const Home = () => {
     try {
       setChatLoading(true);
 
-      const listResp = await fetch(`${backendUrl}/api/chat/public-channels`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      if (!listResp.ok) {
-        const err = await listResp.json().catch(() => ({}));
-        throw new Error(err.message || "No se pudieron obtener los canales.");
-      }
-
-      const listData = await listResp.json();
-      const channels = listData.channels || [];
-      const exists = channels.some((ch) => ch.id === channelId);
-
-      if (exists) {
-        navigate(`/chat?channel_id=${encodeURIComponent(channelId)}`, {
-          state: { selectedBook, channelId },
-        });
-        return;
-      }
-
-      const wantCreate = window.confirm(`No existe un chat para “${selectedBook.title}”.\n\n¿Quieres crearlo ahora?`);
-      if (!wantCreate) {
-        setUiMessage({ type: "warning", text: "Chat no creado. Puedes crear uno cuando quieras." });
-        return;
-      }
-
-      const createResp = await fetch(`${backendUrl}/api/chat/create-or-join-channel`, {
+      // Crear o unirse al canal por ISBN: mismo libro (mismo ISBN) = mismo chat para todos
+      const createResp = await fetch(`${backendUrl}/api/chat/create-or-join-channel-by-isbn`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ book_title: selectedBook.title }),
+        body: JSON.stringify({
+          isbn,
+          book_title: selectedBook.title,
+          thumbnail: selectedBook.thumbnail || null,
+          authors: selectedBook.authors || [],
+        }),
       });
 
       if (!createResp.ok) {
@@ -344,6 +323,7 @@ export const Home = () => {
       setChatLoading(false);
     }
   };
+
 
   const openPrologue = () => {
     setModalMode("prologue");
@@ -386,7 +366,8 @@ export const Home = () => {
                   type="button"
                   className={`card border-0 shadow-sm p-3 text-center mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
                   style={{ borderRadius: "var(--card-radius)", width: "180px", cursor: "pointer" }}
-                  onClick={() => setIsLibraryOpen(true)}
+                  onClick={() => { setModalMode("library"); setIsLibraryOpen(true); }}
+                  title="Cambiar de libro"
                 >
                   <div className="book-card-img shadow-sm">
                     <img

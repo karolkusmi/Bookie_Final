@@ -599,14 +599,10 @@ def create_or_join_channel_by_isbn():
                 "members": [user_id_str],
             }
         )
-        
-        channel.create(user_id_str)
-        
         try:
-            channel.add_members([user_id_str])
+            channel.create(user_id_str)
         except Exception:
-            pass
-        
+            channel.add_members([user_id_str])
         return jsonify({
             "message": "Successfully joined channel",
             "channel_id": channel_id,
