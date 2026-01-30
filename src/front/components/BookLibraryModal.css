@@ -102,12 +102,41 @@
   overflow: hidden;
   flex: 0 0 auto;
   background: #eee;
+  display: grid;
+  place-items: center;
 }
 
 .blm-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.blm-no-cover {
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #e2e1ff 0%, #f0efff 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.blm-no-cover-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #231b59;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.blm-no-cover-sub {
+  font-size: 11px;
+  color: rgba(35, 27, 89, 0.7);
 }
 
 .blm-meta {
@@ -195,4 +224,90 @@
 .blm-btn-wine {
   background: #730202;
   color: #fff;
+}
+
+/* ==========================
+   PROLOGUE MODE
+   ========================== */
+
+.blm-modal-prologue {
+  width: min(760px, 96vw);
+}
+
+.blm-prologue-top {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.blm-prologue-cover {
+  width: 110px;
+  height: 160px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #eee;
+  border: 1px solid rgba(35, 27, 89, 0.12);
+  flex: 0 0 auto;
+}
+
+.blm-prologue-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.blm-prologue-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.blm-prologue-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #231b59;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.blm-prologue-isbn {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.blm-prologue-box {
+  border: 1px solid rgba(35, 27, 89, 0.12);
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.blm-prologue-box-title {
+  font-size: 13px;
+  font-weight: 900;
+  color: #231b59;
+  margin-bottom: 8px;
+}
+
+.blm-prologue-text {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.72);
+  line-height: 1.65;
+  white-space: normal;
+}
+
+@media (max-width: 640px) {
+  .blm-prologue-top {
+    align-items: flex-start;
+  }
+  .blm-prologue-cover {
+    width: 96px;
+    height: 140px;
+  }
 }

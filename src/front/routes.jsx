@@ -3,6 +3,7 @@ import {
   createBrowserRouter,
   createRoutesFromElements,
   Route,
+  Navigate,
 } from "react-router-dom";
 
 // Importación de Layouts y Componentes
@@ -21,14 +22,15 @@ import { ResetPassword } from "./pages/ResetPassword";
 import { Profile } from "./pages/Profile";
 import { MyLibrary } from "./pages/Mylibrary";
 import { AIChatPage } from "./pages/AIChatPage";
+import { Events } from "./pages/Events";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
     <Route errorElement={<h1>Not found!</h1>}>
 
       {/* 1. RUTAS LIMPIAS (Sin Header ni Navbar) */}
-      {/* Al estar fuera de cualquier componente Layout, se verán solas */}
-      <Route path="/" element={<Login />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<Login />} />
       <Route path="/signin" element={<Signin />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -42,6 +44,10 @@ export const router = createBrowserRouter(
         <Route path="/profile" element={<Profile />} />
         <Route path="/library" element={<MyLibrary />} />
         <Route path="/ai-chat" element={<AIChatPage />} />
+
+      </Route>
+
+        <Route path="/events" element={<Events />} />
       </Route>
 
       {/* 3. RUTA CON SOLO HEADER (Chat) */}
@@ -57,7 +63,5 @@ export const router = createBrowserRouter(
           </div>
         }
       />
-
-    </Route>
   )
 );

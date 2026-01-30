@@ -130,3 +130,53 @@
   border-radius: 50px;
   z-index: 4;
 }
+
+.pill-user-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pill-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: 180px;
+  background: var(--pill-bg);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 50;
+}
+
+.pill-dropdown.is-open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.pill-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--pill-text);
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.pill-dropdown-item:hover {
+  background: rgba(35, 27, 89, 0.08);
+}
+
+.pill-dropdown-button {
+  font: inherit;
+}

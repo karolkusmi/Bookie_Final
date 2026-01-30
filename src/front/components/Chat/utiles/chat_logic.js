@@ -22,6 +22,7 @@ export const getStreamClient = () => {
 };
 
 /**
+<<<<<<< HEAD
  * Normalize ISBN by removing dashes and spaces
  * @param {string} isbn - The ISBN to normalize
  * @returns {string} Normalized ISBN
@@ -48,6 +49,7 @@ export const generateBookChannelIdByIsbn = (isbn) => {
  * @param {string} bookTitle - The title of the book
  * @returns {string} The channel ID
  * @deprecated Use generateBookChannelIdByIsbn instead for better matching
+
  */
 export const generateBookChannelId = (bookTitle) => {
   return `book-${bookTitle
@@ -110,6 +112,7 @@ export const disconnectUser = async () => {
 };
 
 /**
+<<<<<<< HEAD
  * Create or join a channel for a book discussion using ISBN
  * Uses the backend API to create/join channels (server has proper permissions)
  * @param {Object} book - The book object with isbn, title, thumbnail, authors
@@ -168,6 +171,12 @@ export const createOrJoinBookChannelByIsbn = async (book) => {
  * @param {string} bookTitle - The book being discussed
  * @returns {Promise<Object>} The channel object
  * @deprecated Use createOrJoinBookChannelByIsbn instead
+=======
+ * Create or join a channel for a book discussion
+ * Uses the backend API to create/join channels (server has proper permissions)
+ * @param {string} bookTitle - The book being discussed
+ * @returns {Promise<Object>} The channel object
+>>>>>>> origin/german_branch
  */
 export const createOrJoinBookChannel = async (bookTitle) => {
   const client = getStreamClient();

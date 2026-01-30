@@ -19,6 +19,7 @@ export const Home = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("prologue"); // "prologue" | "library"
   const [selectedBook, setSelectedBook] = useState(null);
 
   const [uiMessage, setUiMessage] = useState(null);
@@ -208,7 +209,6 @@ export const Home = () => {
     return () => window.removeEventListener("local-storage-changed", syncBook);
   }, []);
 
-
   const handleAddEvent = (newEvent) => {
     dispatch({ type: "add_event", payload: newEvent });
   };
@@ -235,6 +235,38 @@ export const Home = () => {
     const normalized = normalizeIsbn(isbn);
     if (!normalized) return null;
     return `book-isbn-${normalized}`;
+  const handleSelectBook = (book) => {
+    const mapped = {
+      id: book.id,
+      title: book.title,
+      authors: Array.isArray(book.authors) ? book.authors : [],
+      publisher: book.publisher || null,
+      thumbnail: book.thumbnail || null,
+      isbn: normalizeIsbn(book.isbn),
+    };
+
+    setSelectedBook(mapped);
+    localStorage.setItem("selected_book", JSON.stringify(mapped));
+    setUiMessage(null);
+
+    window.dispatchEvent(new Event("local-storage-changed"));
+  };
+
+  const makeChannelIdFromTitle = (title) => {
+    if (!title) return null;
+
+    const normalized = title
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    const cleaned = normalized
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    return `book-${cleaned}`;
   };
 
   const handleOpenChat = async () => {
@@ -257,7 +289,7 @@ export const Home = () => {
       return;
     }
 
-    const channelId = makeChannelIdFromIsbn(isbn);
+    const channelId = makeChannelIdFromTitle(selectedBook.title);
     if (!channelId) {
       setUiMessage({ type: "danger", text: "No se pudo generar el canal para este libro." });
       return;
@@ -266,15 +298,37 @@ export const Home = () => {
     try {
       setChatLoading(true);
 
-      const createResp = await fetch(`${backendUrl}/api/chat/create-or-join-channel-by-isbn`, {
+      const listResp = await fetch(`${backendUrl}/api/chat/public-channels`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!listResp.ok) {
+        const err = await listResp.json().catch(() => ({}));
+        throw new Error(err.message || "No se pudieron obtener los canales.");
+      }
+
+      const listData = await listResp.json();
+      const channels = listData.channels || [];
+      const exists = channels.some((ch) => ch.id === channelId);
+
+      if (exists) {
+        navigate(`/chat?channel_id=${encodeURIComponent(channelId)}`, {
+          state: { selectedBook, channelId },
+        });
+        return;
+      }
+
+      const wantCreate = window.confirm(`No existe un chat para “${selectedBook.title}”.\n\n¿Quieres crearlo ahora?`);
+      if (!wantCreate) {
+        setUiMessage({ type: "warning", text: "Chat no creado. Puedes crear uno cuando quieras." });
+        return;
+      }
+
+      const createResp = await fetch(`${backendUrl}/api/chat/create-or-join-channel`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({
-          isbn: isbn,
-          book_title: selectedBook.title,
-          thumbnail: selectedBook.thumbnail || null,
-          authors: selectedBook.authors || [],
-        }),
+        body: JSON.stringify({ book_title: selectedBook.title }),
       });
 
       if (!createResp.ok) {
@@ -293,6 +347,17 @@ export const Home = () => {
     } finally {
       setChatLoading(false);
     }
+  };
+
+  const openPrologue = () => {
+    setModalMode("prologue");
+    setIsLibraryOpen(true);
+  };
+
+  const openLibrary = (e) => {
+    e.stopPropagation();
+    setModalMode("library");
+    setIsLibraryOpen(true);
   };
 
   return (
@@ -442,8 +507,9 @@ export const Home = () => {
               {(store.eventGlobalList.length === 0 ? eventList : store.eventGlobalList).map((ev, index) => (
                 <div className="col-md-6" key={index}>
                   <div
-                    className={`card border-0 shadow-sm p-3 d-flex flex-row align-items-center event-card mb-card ${enableBorderGlow ? "mb-border-glow" : ""
-                      }`}
+                    className={`card border-0 shadow-sm p-3 d-flex flex-row align-items-center event-card mb-card ${
+                      enableBorderGlow ? "mb-border-glow" : ""
+                    }`}
                     style={{ borderRadius: "15px" }}
                   >
                     <div
@@ -512,9 +578,13 @@ export const Home = () => {
           isOpen={isLibraryOpen}
           onClose={() => setIsLibraryOpen(false)}
           onSelect={handleSelectBook}
+          selectedBook={selectedBook}
+          mode={modalMode}
           onAddToLibrary={addBookToLibrary}
         />
       </div>
     </div>
   );
+}
+
 };

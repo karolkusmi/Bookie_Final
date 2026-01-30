@@ -6,7 +6,11 @@ DEBUG=TRUE
 
 #Front-End Variables
 VITE_BASENAME=/
+<<<<<<< HEAD
 VITE_BACKEND_URL=http://localhost:3001/
+=======
+VITE_BACKEND_URL=http://localhost:3001
+>>>>>>> origin/german_branch
 
 
 VITE_STREAM_API_KEY=3kmhfwk7eqh2

@@ -1,7 +1,10 @@
-import { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { gsap } from "gsap";
 import "./PillNav.css";
+import { nav } from "framer-motion/client";
+import { useNavigate } from "react-router-dom";
+
 
 const PillNav = ({
   logo,
@@ -15,16 +18,31 @@ const PillNav = ({
   pillTextColor,
   onLogoClick,
   initialLoadAnimation = true,
+  profileHref = "/profile",
+  onLogout,
 }) => {
   const resolvedPillTextColor = pillTextColor ?? baseColor;
+
+  const navigate = useNavigate();
 
   const circleRefs = useRef([]);
   const tlRefs = useRef([]);
   const activeTweenRefs = useRef([]);
+  const navItemsRef = useRef(null);
+
   const logoImgRef = useRef(null);
   const logoTweenRef = useRef(null);
-  const navItemsRef = useRef(null);
-  const logoRef = useRef(null);
+
+  const profileBtnRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const location = useLocation();
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const layout = () => {
@@ -82,26 +100,40 @@ const PillNav = ({
     window.addEventListener("resize", onResize);
 
     if (document.fonts?.ready) {
-      document.fonts.ready.then(layout).catch(() => {});
+      document.fonts.ready.then(layout).catch(() => { });
     }
 
     if (initialLoadAnimation) {
-      const logoEl = logoRef.current;
       const navItemsEl = navItemsRef.current;
-
-      if (logoEl) {
-        gsap.set(logoEl, { scale: 0 });
-        gsap.to(logoEl, { scale: 1, duration: 0.6, ease });
-      }
+      const profileEl = profileBtnRef.current;
 
       if (navItemsEl) {
         gsap.set(navItemsEl, { width: 0, overflow: "hidden" });
         gsap.to(navItemsEl, { width: "auto", duration: 0.6, ease });
       }
+
+      if (profileEl) {
+        gsap.set(profileEl, { scale: 0 });
+        gsap.to(profileEl, { scale: 1, duration: 0.6, ease });
+      }
     }
 
     return () => window.removeEventListener("resize", onResize);
   }, [items, ease, initialLoadAnimation]);
+
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!menuOpen) return;
+      const btn = profileBtnRef.current;
+      const dd = dropdownRef.current;
+      if (btn?.contains(e.target)) return;
+      if (dd?.contains(e.target)) return;
+      setMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [menuOpen]);
 
   const handleEnter = (i) => {
     const tl = tlRefs.current[i];
@@ -124,6 +156,8 @@ const PillNav = ({
     gsap.set(img, { rotate: 0 });
     logoTweenRef.current = gsap.to(img, { rotate: 360, duration: 0.2, ease, overwrite: "auto" });
   };
+
+  const toggleMenu = () => setMenuOpen((v) => !v);
 
   const cssVars = {
     ["--base"]: baseColor,
@@ -176,6 +210,43 @@ const PillNav = ({
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className="pill-user-area">
+        <button
+          type="button"
+          className="pill-logo pill-logo-right"
+          aria-label="User menu"
+          onMouseEnter={handleLogoEnter}
+          onClick={toggleMenu}
+          ref={profileBtnRef}
+        >
+          <img ref={logoImgRef} src={logo} alt={logoAlt} />
+        </button>
+
+        <div
+          ref={dropdownRef}
+          className={`pill-dropdown${menuOpen ? " is-open" : ""}`}
+          role="menu"
+          aria-hidden={!menuOpen}
+        >
+          <Link className="pill-dropdown-item" to={profileHref} role="menuitem" onClick={() => setMenuOpen(false)}>
+            Profile
+          </Link>
+          <button
+            type="button"
+            className="pill-dropdown-item pill-dropdown-button"
+            role="menuitem"
+            onClick={() => {
+              localStorage.removeItem("token");
+              localStorage.removeItem("user");
+              setMenuOpen(false);
+              navigate("/login");
+            }}
+          >
+            Log out
+          </button>
+        </div>
       </div>
     </nav>
   );

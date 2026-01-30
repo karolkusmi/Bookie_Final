@@ -6,14 +6,18 @@
   flex-direction: column;
   overflow: hidden;
   background: #f9f9f7;
+  min-height: 500px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
 /* Override Stream Chat default styles */
 .str-chat {
-  height: 100% !important;
+  height: 100% ;
   max-height: 100vh;
   display: flex;
   flex-direction: column;
+  border-radius: 15px;
 }
 
 .str-chat__container {
@@ -173,6 +177,8 @@
 
 .str-chat__send-button svg {
   display: none;
+  padding: 0 25px !important;
+
 }
 
 .str-chat__send-button:hover {
@@ -557,7 +563,7 @@
 /* Adjust channel content when action bar is present */
 .active-channel-container .str-chat {
   flex: 1;
-  height: 0; /* Trick to make flex work with overflow */
+  height: auto; /* Trick to make flex work with overflow */
   min-height: 0;
 }
 

@@ -6,12 +6,16 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
+<<<<<<< HEAD
 # Core Framework
+=======
+>>>>>>> origin/german_branch
 flask = "*"  # O "~=3.1.2" si quieres mantenerte en la v3
 flask-cors = "*"
 flask-migrate = "*"
 flask-sqlalchemy = "*"
 flask-jwt-extended = "*"
+<<<<<<< HEAD
 
 # Database
 # IMPORTANTE: psycopg2 2.8.6 es incompatible con Python 3.14. 
@@ -21,10 +25,16 @@ sqlalchemy = "*"
 alembic = "*"
 
 # Utilities
+=======
+psycopg2-binary = "*" 
+sqlalchemy = "*"
+alembic = "*"
+>>>>>>> origin/german_branch
 python-dotenv = "*"
 cloudinary = "*"
 colorama = "*"
 pyyaml = "*"
+<<<<<<< HEAD
 
 # Stream Chat
 stream-chat = "*"
@@ -40,10 +50,18 @@ gunicorn = "*"  # La versión 20.x es vieja, mejor dejar que actualice
 # flask-swagger = "==0.2.14" <-- ELIMINADO: Incompatible con Flask 3.
 
 # Legacy support (si realmente lo necesitas, mantén las versiones, pero relaja el pin)
+=======
+stream-chat = "*"
+gunicorn = "*"  # La versión 20.x es vieja, mejor dejar que actualice
+>>>>>>> origin/german_branch
 flask-admin = "*"
 wtforms = "*"
 mako = "*"
 python-editor = "*"
+<<<<<<< HEAD
+=======
+google-generativeai = "*"
+>>>>>>> origin/german_branch
 
 [requires]
 python_version = "3.14"
@@ -57,4 +75,8 @@ upgrade="flask db upgrade"
 downgrade="flask db downgrade"
 insert-test-data="flask insert-test-data"
 reset_db="bash ./docs/assets/reset_migrations.bash"
+<<<<<<< HEAD
 deploy="echo 'Please follow this 3 steps to deploy: https://github.com/4GeeksAcademy/flask-rest-hello/blob/master/README.md#deploy-your-website-to-heroku' "
+=======
+deploy="echo 'Please follow this 3 steps to deploy: https://github.com/4GeeksAcademy/flask-rest-hello/blob/master/README.md#deploy-your-website-to-heroku' "
+>>>>>>> origin/german_branch
