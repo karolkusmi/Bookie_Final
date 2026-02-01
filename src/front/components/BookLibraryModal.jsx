@@ -41,6 +41,7 @@ export default function BookLibraryModal({
       setSearchTerm("");
       setFoundBooks([]);
       setPicked(null);
+      setSelected(null);
     }
     if (mode === "prologue") {
       setPrologueText(null);
@@ -121,15 +122,21 @@ export default function BookLibraryModal({
       isbn: normalizeIsbn(b.isbn),
     };
     setPicked(mapped);
+    setSelected(mapped);
+    if (mode === "library") {
+      return;
+    }
     onSelect?.(mapped);
     onClose?.();
   };
 
   const handleAdd = async () => {
-    if (!canAdd) return;
+    const bookToAdd = selected || picked;
+    if (!bookToAdd || !normalizeIsbn(bookToAdd?.isbn)) return;
     setSaving(true);
     try {
-      await onAddToLibrary?.(selected);
+      await onAddToLibrary?.(bookToAdd);
+      onSelect?.(bookToAdd);
       onClose?.();
     } finally {
       setSaving(false);
