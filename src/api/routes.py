@@ -12,7 +12,7 @@ import jwt
 from datetime import datetime, timedelta
 from flask import current_app
 from flask import request, jsonify
-from api.utils_scripts.auth_utils import create_refresh_token, verify_token, create_token
+from api.utils_scripts.auth_utils import create_refresh_token, verify_token, create_token, verify_refresh_token
 import requests
 from api.models import db, User, Book
 import json
@@ -112,6 +112,24 @@ def login():
 
     return response
 
+
+@api.route("/auth/refresh", methods=["POST"])
+def refresh_token():
+    """Refresh access token using refresh token"""
+    data = request.get_json() or {}
+    refresh = data.get("refresh_token") or request.headers.get("Authorization", "").replace("Bearer ", "")
+
+    if not refresh:
+        return jsonify({"message": "Refresh token required"}), 401
+
+    user_id = verify_refresh_token(refresh)
+    if not user_id:
+        return jsonify({"message": "Invalid or expired refresh token"}), 401
+
+    access_token = create_token(user_id)
+    return jsonify({"access_token": access_token}), 200
+
+
 #----RUTAS DE USUARIOS----#
 
 @api.route('/users', methods=['GET'])
@@ -195,6 +213,42 @@ def books_search():
         })
 
     return jsonify({"totalItems": data.get("totalItems", 0), "items": normalized}), 200
+
+
+@api.route("/books/by-isbn", methods=["GET"])
+def books_by_isbn():
+    """Obtiene la descripción de un libro por ISBN (para prólogo). Usa GOOGLE_BOOKS_API_KEY."""
+    isbn_raw = request.args.get("isbn", "").strip()
+    isbn = normalize_isbn(isbn_raw)
+    if not isbn:
+        return jsonify({"message": "isbn required"}), 400
+
+    url = "https://www.googleapis.com/books/v1/volumes"
+    params = {"q": f"isbn:{isbn}", "maxResults": 1}
+    google_books_api_key = os.getenv("GOOGLE_BOOKS_API_KEY")
+    if google_books_api_key:
+        params["key"] = google_books_api_key
+
+    try:
+        r = requests.get(url, params=params, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+    except requests.RequestException as e:
+        return jsonify({"message": "Error connecting to Google Books", "error": str(e)}), 502
+
+    if r.status_code == 429:
+        return jsonify({"message": "Se ha excedido el límite de búsquedas. Intenta de nuevo en unos minutos.", "error": "rate_limit"}), 429
+    if r.status_code != 200:
+        return jsonify({"message": "Google Books error", "status_code": r.status_code}), 502
+
+    data = r.json()
+    items = data.get("items", []) or []
+    if not items:
+        return jsonify({"description": None}), 200
+
+    item = items[0]
+    vi = item.get("volumeInfo", {}) or {}
+    description = vi.get("description") or None
+    return jsonify({"description": description}), 200
+
 
 #----RUTAS DE EVENTOS----#
 

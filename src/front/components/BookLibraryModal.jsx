@@ -60,15 +60,11 @@ export default function BookLibraryModal({
     const fetchPrologue = async () => {
       setPrologueLoading(true);
       try {
-        const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`;
-        const resp = await fetch(url);
+        const base = (backendUrl || "").replace(/\/$/, "");
+        const resp = await fetch(`${base}/api/books/by-isbn?isbn=${encodeURIComponent(isbn)}`);
         if (!resp.ok) throw new Error("google_books_failed");
         const data = await resp.json();
-
-        const item = (data.items || [])[0];
-        const description = item?.volumeInfo?.description || null;
-
-        setPrologueText(description);
+        setPrologueText(data.description ?? null);
       } catch (e) {
         setPrologueText(null);
       } finally {

@@ -16,7 +16,7 @@ const AIChat = () => {
     const streamContentRef = useRef("");
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
-    const API_BASE = `${backendUrl}api`;
+    const API_BASE = `${backendUrl?.replace(/\/$/, "") || ""}/api`;
 
     // Auto-scroll al final de los mensajes
     const scrollToBottom = () => {
@@ -28,9 +28,26 @@ const AIChat = () => {
     }, [messages]);
 
     // Obtener token de autenticación
-    const getAuthToken = () => {
-        return localStorage.getItem("access_token");
+    const getAuthToken = () => localStorage.getItem("access_token");
+
+    // Refrescar token y guardar nuevo access_token
+    const refreshAccessToken = async () => {
+        const refresh = localStorage.getItem("refresh_token");
+        if (!refresh) return null;
+        const resp = await fetch(`${API_BASE}/auth/refresh`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh_token: refresh })
+        });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        if (data.access_token) {
+            localStorage.setItem("access_token", data.access_token);
+            return data.access_token;
+        }
+        return null;
     };
+
 
     // Enviar mensaje al chat con IA
     const sendMessage = async (messageText) => {
@@ -147,24 +164,41 @@ const AIChat = () => {
     };
 
     // Función "Sorpréndeme" - obtener libro aleatorio
+    const fetchRandomBook = async (token) => {
+        const response = await fetch(`${API_BASE}/ai-chat/random-book`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        return { response, ok: response.ok };
+    };
+
     const handleSurpriseMe = async () => {
         setIsSurprising(true);
         try {
-            const token = getAuthToken();
+            let token = getAuthToken();
+            if (!token) {
+                token = await refreshAccessToken();
+            }
             if (!token) {
                 throw new Error("No estás autenticado. Por favor, inicia sesión.");
             }
 
-            const response = await fetch(`${API_BASE}/ai-chat/random-book`, {
-                method: "GET",
-                headers: {
-                    "Authorization": `Bearer ${token}`
+            let { response } = await fetchRandomBook(token);
+            if (response.status === 401) {
+                token = await refreshAccessToken();
+                if (token) {
+                    const retry = await fetchRandomBook(token);
+                    response = retry.response;
                 }
-            });
+            }
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || "Error al obtener libro aleatorio");
+                const errorData = await response.json().catch(() => ({}));
+                const msg = errorData.message || "Error al obtener libro aleatorio";
+                if (response.status === 401) {
+                    throw new Error("Tu sesión ha expirado. Por favor, cierra sesión e inicia sesión de nuevo.");
+                }
+                throw new Error(msg);
             }
 
             const book = await response.json();
@@ -194,9 +228,10 @@ const AIChat = () => {
 
         } catch (error) {
             console.error("Error getting random book:", error);
+            const msg = error.message || "Error desconocido";
             setMessages(prev => [...prev, {
                 role: "assistant",
-                content: `Lo siento, no pude obtener un libro aleatorio: ${error.message}`
+                content: msg.includes("sesión") ? msg : `Lo siento, no pude obtener un libro aleatorio: ${msg}`
             }]);
         } finally {
             setIsSurprising(false);
