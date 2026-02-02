@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "../components/UserContext";
 
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+const normalizeIsbn = (isbn) => (isbn || "").replaceAll("-", "").replaceAll(" ", "").toUpperCase();
 
 export const Home = () => {
   const { store, dispatch } = useGlobalReducer();
@@ -24,7 +25,7 @@ export const Home = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
-  const [modalMode, setModalMode] = useState("library");
+  const [modalMode, setModalMode] = useState("library"); // "prologue" | "library"
   const [selectedBook, setSelectedBook] = useState(null);
 
   const [uiMessage, setUiMessage] = useState(null);
@@ -40,8 +41,6 @@ export const Home = () => {
   const clickEffect = true;
   const spotlightRadius = 730;
   const glowColor = "132, 0, 255";
-
-  const normalizeIsbn = (isbn) => (isbn || "").replaceAll("-", "").replaceAll(" ", "").toUpperCase();
 
   const addBookToLibrary = async (book) => {
     const user = JSON.parse(localStorage.getItem("user_data"));
@@ -98,7 +97,7 @@ export const Home = () => {
     try {
       const saved = JSON.parse(localStorage.getItem("event_global_list") || "[]");
       if (Array.isArray(saved) && saved.length) return saved;
-    } catch (e) { }
+    } catch (e) {}
     if (Array.isArray(store.eventGlobalList) && store.eventGlobalList.length) return store.eventGlobalList;
     return store.initialEventList || [];
   };
@@ -243,6 +242,7 @@ export const Home = () => {
       return;
     }
     let cancelled = false;
+
     fetch(`${backendUrl}/api/chat/channel-members-by-isbn?isbn=${encodeURIComponent(isbn)}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -253,7 +253,10 @@ export const Home = () => {
       .catch(() => {
         if (!cancelled) setActiveReaders([]);
       });
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedBook?.isbn, backendUrl]);
 
   const handleAddEvent = (newEvent) => {
@@ -261,7 +264,11 @@ export const Home = () => {
 
     try {
       const current = JSON.parse(localStorage.getItem("event_global_list") || "[]");
-      const id = newEvent?.id ?? newEvent?.event_id ?? newEvent?._id ?? `${(newEvent?.title || "event").slice(0, 20)}-${Date.now()}`;
+      const id =
+        newEvent?.id ??
+        newEvent?.event_id ??
+        newEvent?._id ??
+        `${(newEvent?.title || "event").slice(0, 20)}-${Date.now()}`;
       const withId = { ...newEvent, id };
 
       const exists = current.some((e) => (e.id ?? e.event_id ?? e._id) === id);
@@ -272,19 +279,7 @@ export const Home = () => {
       localStorage.setItem("event_global_list", JSON.stringify(next));
       window.dispatchEvent(new Event("local-storage-changed"));
       setEventList(next);
-    } catch (e) { }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user_data");
-    localStorage.removeItem("stream_token");
-    localStorage.removeItem("selected_book");
-    localStorage.removeItem("token");
-    localStorage.removeItem("selectedBook");
-    localStorage.removeItem("userAvatar");
-    navigate("/");
+    } catch (e) {}
   };
 
   const makeChannelIdFromIsbn = (isbn) => {
@@ -293,27 +288,22 @@ export const Home = () => {
     return `book-isbn-${normalized}`;
   };
 
+  // ✅ IMPORTANTE: mapeo + normalize (para no romper prologue / ISBN)
   const handleSelectBook = (book) => {
-    setSelectedBook(book);
-    localStorage.setItem("selected_book", JSON.stringify(book));
+    const mapped = {
+      id: book.id,
+      title: book.title,
+      authors: Array.isArray(book.authors) ? book.authors : [],
+      publisher: book.publisher || null,
+      thumbnail: book.thumbnail || null,
+      isbn: normalizeIsbn(book.isbn),
+    };
+
+    setSelectedBook(mapped);
+    localStorage.setItem("selected_book", JSON.stringify(mapped));
     setUiMessage(null);
-  };
 
-  const makeChannelIdFromTitle = (title) => {
-    if (!title) return null;
-
-    const normalized = title
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-
-    const cleaned = normalized
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-+|-+$/g, "");
-
-    return `book-${cleaned}`;
+    window.dispatchEvent(new Event("local-storage-changed"));
   };
 
   const handleOpenChat = async () => {
@@ -326,7 +316,10 @@ export const Home = () => {
 
     const isbn = normalizeIsbn(selectedBook?.isbn);
     if (!isbn) {
-      setUiMessage({ type: "warning", text: "Este libro no tiene ISBN. Solo puedes chatear sobre libros con ISBN válido." });
+      setUiMessage({
+        type: "warning",
+        text: "Este libro no tiene ISBN. Solo puedes chatear sobre libros con ISBN válido.",
+      });
       return;
     }
 
@@ -365,9 +358,14 @@ export const Home = () => {
       const createData = await createResp.json();
       const createdChannelId = createData.channel_id || channelId;
 
-      navigate(`/chat?channel=${encodeURIComponent(createdChannelId)}&isbn=${encodeURIComponent(isbn)}&book=${encodeURIComponent(selectedBook.title)}`, {
-        state: { selectedBook, channelId: createdChannelId },
-      });
+      navigate(
+        `/chat?channel=${encodeURIComponent(createdChannelId)}&isbn=${encodeURIComponent(isbn)}&book=${encodeURIComponent(
+          selectedBook.title
+        )}`,
+        {
+          state: { selectedBook, channelId: createdChannelId },
+        }
+      );
     } catch (e) {
       setUiMessage({ type: "danger", text: e.message });
     } finally {
@@ -375,11 +373,13 @@ export const Home = () => {
     }
   };
 
+  // ✅ Click en el libro => Prologue (sinopsis)
   const openPrologue = () => {
     setModalMode("prologue");
     setIsLibraryOpen(true);
   };
 
+  // ✅ Botón "+" => Librería
   const openLibrary = (e) => {
     e.stopPropagation();
     setModalMode("library");
@@ -412,30 +412,36 @@ export const Home = () => {
               )}
 
               <div className="d-flex gap-3 flex-wrap">
-                <button
-                  type="button"
-                  className={`card border-0 shadow-sm p-3 text-center mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
-                  style={{ borderRadius: "var(--card-radius)", width: "180px", cursor: "pointer" }}
-                  onClick={() => { setModalMode("library"); setIsLibraryOpen(true); }}
-                  title="Cambiar de libro"
-                >
-                  <div className="book-card-img shadow-sm">
-                    <img
-                      src={selectedBook?.thumbnail || portadaLibro}
-                      alt={selectedBook?.title || "Book cover"}
-                      className="w-100 h-100 object-fit-cover"
-                      onError={(e) => (e.currentTarget.style.display = "none")}
-                    />
-                  </div>
-
-                  <span className="fw-bold small">{selectedBook?.title || "Your Book !!"}</span>
-
-                  {selectedBook?.isbn && (
-                    <div className="text-muted" style={{ fontSize: "0.7rem" }}>
-                      ISBN: {selectedBook.isbn}
+                {/* ✅ LIBRO + BOTÓN "+" (sin romper estructura) */}
+                <div className="home-book-wrap">
+                  <button
+                    type="button"
+                    className={`card border-0 shadow-sm p-3 text-center mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
+                    style={{ borderRadius: "var(--card-radius)", width: "180px", cursor: "pointer" }}
+                    onClick={openPrologue}
+                  >
+                    <div className="book-card-img shadow-sm">
+                      <img
+                        src={selectedBook?.thumbnail || portadaLibro}
+                        alt={selectedBook?.title || "Book cover"}
+                        className="w-100 h-100 object-fit-cover"
+                        onError={(e) => (e.currentTarget.style.display = "none")}
+                      />
                     </div>
-                  )}
-                </button>
+
+                    <span className="fw-bold small">{selectedBook?.title || "Your Book !!"}</span>
+
+                    {selectedBook?.isbn && (
+                      <div className="text-muted" style={{ fontSize: "0.7rem" }}>
+                        ISBN: {selectedBook.isbn}
+                      </div>
+                    )}
+                  </button>
+
+                  <button type="button" className="home-plus-btn" onClick={openLibrary} aria-label="Add book">
+                    +
+                  </button>
+                </div>
 
                 <div
                   className={`card border-0 shadow-sm p-4 flex-grow-1 mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
@@ -448,7 +454,10 @@ export const Home = () => {
                       activeReaders.slice(0, 6).map((user, i) => (
                         <img
                           key={user.id}
-                          src={user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.id)}&background=8b1a30&color=fff`}
+                          src={
+                            user.image ||
+                            `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.id)}&background=8b1a30&color=fff`
+                          }
                           alt={user.name || user.id}
                           className="rounded-circle border border-white"
                           style={{
@@ -457,11 +466,13 @@ export const Home = () => {
                             marginLeft: i === 0 ? 0 : "-12px",
                             objectFit: "cover",
                             boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                            border: "2px solid white"
+                            border: "2px solid white",
                           }}
                           title={user.name || user.id}
                           onError={(e) => {
-                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.id)}&background=8b1a30&color=fff`;
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                              user.name || user.id
+                            )}&background=8b1a30&color=fff`;
                           }}
                         />
                       ))
@@ -547,8 +558,9 @@ export const Home = () => {
               {eventList.map((ev, index) => (
                 <div className="col-md-6" key={ev.id || index}>
                   <div
-                    className={`card border-0 shadow-sm p-3 d-flex flex-row align-items-center event-card mb-card ${enableBorderGlow ? "mb-border-glow" : ""
-                      }`}
+                    className={`card border-0 shadow-sm p-3 d-flex flex-row align-items-center event-card mb-card ${
+                      enableBorderGlow ? "mb-border-glow" : ""
+                    }`}
                     style={{ borderRadius: "15px" }}
                   >
                     <div
@@ -558,7 +570,7 @@ export const Home = () => {
                         width: "56px",
                         height: "56px",
                         boxShadow: "0 4px 12px rgba(139, 26, 48, 0.15)",
-                        transition: "all 0.3s ease"
+                        transition: "all 0.3s ease",
                       }}
                     >
                       {ev.icon}
@@ -589,7 +601,9 @@ export const Home = () => {
                 className={`card border-0 shadow-sm p-3 mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
                 style={{ borderRadius: "15px", overflow: "hidden" }}
               >
-                <h6 className="fw-bold mb-3" style={{ color: "#231B59" }}>Música para leer 🎵</h6>
+                <h6 className="fw-bold mb-3" style={{ color: "#231B59" }}>
+                  Música para leer 🎵
+                </h6>
                 <iframe
                   data-testid="embed-iframe"
                   style={{ borderRadius: "12px", border: "0" }}
@@ -604,18 +618,9 @@ export const Home = () => {
             </div>
             {/* --- FIN WIDGET SPOTIFY --- */}
 
-
-
-
-
-
             <CreateEventModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleAddEvent} />
 
-            <EventDetailsModal
-              isOpen={isEventDetailsOpen}
-              onClose={() => setIsEventDetailsOpen(false)}
-              event={selectedEvent}
-            />
+            <EventDetailsModal isOpen={isEventDetailsOpen} onClose={() => setIsEventDetailsOpen(false)} event={selectedEvent} />
           </div>
         </div>
 

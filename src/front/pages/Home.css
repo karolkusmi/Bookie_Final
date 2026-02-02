@@ -601,3 +601,8 @@ section:last-child {
 .home-plus-btn:active {
   transform: translateY(0);
 }
+
+.home-book-wrap {
+  position: relative;
+  display: inline-block;
+}

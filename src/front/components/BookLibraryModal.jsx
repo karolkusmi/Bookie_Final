@@ -16,15 +16,9 @@ export default function BookLibraryModal({
 
   const [searchTerm, setSearchTerm] = useState("");
   const [foundBooks, setFoundBooks] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const [picked, setPicked] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  const canAdd = useMemo(() => {
-    const isbn = normalizeIsbn(selected?.isbn);
-    return !!selected && !!isbn && !saving;
-  }, [selected, saving]);
-  const [picked, setPicked] = useState(null);
 
   const [prologueText, setPrologueText] = useState(null);
   const [prologueLoading, setPrologueLoading] = useState(false);
@@ -34,6 +28,10 @@ export default function BookLibraryModal({
     return picked || null;
   }, [mode, selectedBook, picked]);
 
+  const canAdd = useMemo(() => {
+    const isbn = normalizeIsbn(effectiveSelected?.isbn);
+    return !!effectiveSelected && !!isbn && !saving;
+  }, [effectiveSelected, saving]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -41,7 +39,6 @@ export default function BookLibraryModal({
       setSearchTerm("");
       setFoundBooks([]);
       setPicked(null);
-      setSelected(null);
     }
     if (mode === "prologue") {
       setPrologueText(null);
@@ -61,11 +58,15 @@ export default function BookLibraryModal({
     const fetchPrologue = async () => {
       setPrologueLoading(true);
       try {
-        const base = (backendUrl || "").replace(/\/$/, "");
-        const resp = await fetch(`${base}/api/books/by-isbn?isbn=${encodeURIComponent(isbn)}`);
+        const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`;
+        const resp = await fetch(url);
         if (!resp.ok) throw new Error("google_books_failed");
         const data = await resp.json();
-        setPrologueText(data.description ?? null);
+
+        const item = (data.items || [])[0];
+        const description = item?.volumeInfo?.description || null;
+
+        setPrologueText(description);
       } catch (e) {
         setPrologueText(null);
       } finally {
@@ -90,23 +91,12 @@ export default function BookLibraryModal({
     setLoading(true);
     try {
       const resp = await fetch(`${backendUrl}/api/books/search?title=${encodeURIComponent(q)}`);
-      if (!resp.ok) {
-        const errorData = await resp.json().catch(() => ({}));
-        if (resp.status === 429 || errorData.error === "rate_limit") {
-          throw new Error("rate_limit");
-        }
-        throw new Error(errorData.message || "Search failed");
-      }
+      if (!resp.ok) throw new Error("Search failed");
       const data = await resp.json();
       setFoundBooks(data.items || []);
     } catch (e) {
-      console.error(e);
       setFoundBooks([]);
-      if (e.message === "rate_limit") {
-        alert("Se ha excedido el límite de búsquedas. Intenta de nuevo en unos minutos.");
-      } else {
-        alert("No se pudo buscar libros. Verifica tu conexión e intenta de nuevo.");
-      }
+      alert("No se pudo buscar libros.");
     } finally {
       setLoading(false);
     }
@@ -122,20 +112,15 @@ export default function BookLibraryModal({
       isbn: normalizeIsbn(b.isbn),
     };
     setPicked(mapped);
-    setSelected(mapped);
-    if (mode === "prologue") {
-      onSelect?.(mapped);
-      onClose?.();
-    }
+    onSelect?.(mapped);
+    onClose?.();
   };
 
   const handleAdd = async () => {
-    const bookToAdd = selected || picked;
-    if (!bookToAdd || !normalizeIsbn(bookToAdd?.isbn)) return;
+    if (!canAdd) return;
     setSaving(true);
     try {
-      await onAddToLibrary?.(bookToAdd);
-      onSelect?.(bookToAdd);
+      await onAddToLibrary?.(effectiveSelected);
       onClose?.();
     } finally {
       setSaving(false);
@@ -184,13 +169,25 @@ export default function BookLibraryModal({
               {prologueLoading ? (
                 <div className="blm-prologue-text">Cargando prólogo...</div>
               ) : prologueText ? (
-                <div
-                  className="blm-prologue-text"
-                  dangerouslySetInnerHTML={{ __html: prologueText }}
-                />
+                <div className="blm-prologue-text" dangerouslySetInnerHTML={{ __html: prologueText }} />
               ) : (
                 <div className="blm-prologue-text">Este libro no tiene prólogo disponible.</div>
               )}
+            </div>
+          </div>
+
+          {/* ✅ Footer con la MISMA funcionalidad que en "library" */}
+          <div className="blm-footer">
+            <div className="blm-selected">
+              {effectiveSelected?.title ? `Selected: ${effectiveSelected.title}` : "Select a book"}
+            </div>
+            <div className="blm-actions">
+              <button className="blm-btn blm-btn-ghost" onClick={onClose}>
+                Close
+              </button>
+              <button className="blm-btn blm-btn-wine" onClick={handleAdd} disabled={!canAdd}>
+                {saving ? "Adding..." : "Add to library"}
+              </button>
             </div>
           </div>
         </div>
@@ -226,29 +223,21 @@ export default function BookLibraryModal({
             {foundBooks.map((b) => {
               const hasCover = !!b.thumbnail;
               const isbn = normalizeIsbn(b.isbn);
-              const isSelected = normalizeIsbn(selected?.isbn) === isbn;
 
               return (
                 <button
                   type="button"
                   key={b.id || b.isbn || b.title}
-                  className={`blm-card ${isSelected ? "is-selected" : ""}`}
+                  className="blm-card"
                   onClick={() => handlePick(b)}
                 >
                   <div className="blm-cover">
                     {hasCover ? (
-                      <img
-                        src={b.thumbnail}
-                        alt={b.title}
-                      />
+                      <img src={b.thumbnail} alt={b.title} />
                     ) : (
                       <div className="blm-no-cover">
-                        <div className="blm-no-cover-title">
-                          {b.title}
-                        </div>
-                        <div className="blm-no-cover-sub">
-                          Libro sin portada
-                        </div>
+                        <div className="blm-no-cover-title">{b.title}</div>
+                        <div className="blm-no-cover-sub">Libro sin portada</div>
                       </div>
                     )}
                   </div>
@@ -272,7 +261,7 @@ export default function BookLibraryModal({
 
         <div className="blm-footer">
           <div className="blm-selected">
-            {selected?.title ? `Selected: ${selected.title}` : "Select a book or add to library"}
+            {effectiveSelected?.title ? `Selected: ${effectiveSelected.title}` : "Select a book"}
           </div>
           <div className="blm-actions">
             <button className="blm-btn blm-btn-ghost" onClick={onClose}>
