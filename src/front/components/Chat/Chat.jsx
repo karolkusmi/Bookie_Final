@@ -8,6 +8,8 @@ import {
     Thread,
     Window,
     ChannelList,
+    useChannelStateContext,
+    useChatContext,
 } from "stream-chat-react";
 import "stream-chat-react/dist/css/v2/index.css";
 import Toastify from 'toastify-js';
@@ -53,7 +55,52 @@ const showErrorToast = (message) => {
     }).showToast();
 };
 
-const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onCloseChannel = null }) => {
+/**
+ * Inner component that must render inside <Channel>.
+ * Reports current watchers/members to parent so Chat1 can show real avatars.
+ */
+function ChannelWatchersReporter({ onWatchers }) {
+    const { channel } = useChannelStateContext();
+    const { client } = useChatContext();
+
+    useEffect(() => {
+        if (!channel || typeof onWatchers !== "function") return;
+
+        const update = () => {
+            const watchers = channel.state.watchers || {};
+            const members = channel.state.members || {};
+            const watcherList = Object.values(watchers);
+            const memberUsers = Object.values(members)
+                .map((m) => m.user)
+                .filter(Boolean);
+            const users = watcherList.length ? watcherList : memberUsers;
+            const list = users.map((u) => ({
+                id: u.id,
+                name: u.name || u.id,
+                image: u.image,
+            }));
+            onWatchers(list);
+        };
+
+        update();
+        channel.on("user.watching.start", update);
+        channel.on("user.watching.stop", update);
+        if (client) {
+            client.on("user.presence.changed", update);
+        }
+        return () => {
+            channel.off("user.watching.start", update);
+            channel.off("user.watching.stop", update);
+            if (client) {
+                client.off("user.presence.changed", update);
+            }
+        };
+    }, [channel, client, onWatchers]);
+
+    return null;
+}
+
+const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onCloseChannel = null, onChannelWatchers = null }) => {
     const [client, setClient] = useState(null);
     const [channel, setChannel] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -444,6 +491,7 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
                         </div>
 
                         <Channel channel={channel}>
+                            {onChannelWatchers && <ChannelWatchersReporter onWatchers={onChannelWatchers} />}
                             <Window>
                                 <ChannelHeader />
                                 <MessageList />

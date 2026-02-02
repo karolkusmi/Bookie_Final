@@ -89,6 +89,10 @@ export const Chat1 = () => {
         }
     }, [navigate, searchParams]);
 
+    useEffect(() => {
+        if (!activeChannelId) setActiveReaders([]);
+    }, [activeChannelId]);
+
     const handleJoinChannel = (channelId, title) => {
         setActiveChannelId(channelId);
         setBookTitle(title);
@@ -127,18 +131,35 @@ export const Chat1 = () => {
                 {!bookTitle && (
                     <div className="book-section empty-state">
                         <h4>Bienvenido al Chat</h4>
-                        <p className="empty-text">Selecciona un libro en el Home para chatear con otros lectores del mismo libro</p>
+                        <p className="empty-text">Select a book on Home to chat with other readers of the same book</p>
                     </div>
                 )}
 
                 <div className="readers-section">
-                    <h4>Lectores activos en el chat</h4>
+                    <h4>Active readers in the chat</h4>
                     <div className="avatar-group">
-                        <img src="https://i.pravatar.cc/40?u=1" alt="user1" className="avatar" />
-                        <img src="https://i.pravatar.cc/150?img=47" alt="user2" className="avatar" />
-                        <img src="https://i.pravatar.cc/150?img=12" alt="user3" className="avatar" />
+                        {activeReaders.length > 0 ? (
+                            activeReaders.slice(0, 8).map((user) => (
+                                <img
+                                    key={user.id}
+                                    src={user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.id)}&background=8b1a30&color=fff`}
+                                    alt={user.name || user.id}
+                                    className="avatar"
+                                    title={user.name || user.id}
+                                    onError={(e) => {
+                                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.id)}&background=8b1a30&color=fff`;
+                                    }}
+                                />
+                            ))
+                        ) : (
+                            <span className="text-muted small">No one connected yet</span>
+                        )}
                     </div>
-                    <p className="readers-count">Aure y 12 más están aquí ahora</p>
+                    <p className="readers-count">
+                        {activeReaders.length === 0 && "Select a book and open the chat to see who's here"}
+                        {activeReaders.length === 1 && "1 reader connected"}
+                        {activeReaders.length > 1 && `${activeReaders.length} readers connected`}
+                    </p>
                 </div>
             </aside>
 
@@ -149,6 +170,7 @@ export const Chat1 = () => {
                     bookTitle={bookTitle}
                     onJoinChannel={handleJoinChannel}
                     onCloseChannel={handleCloseChannel}
+                    onChannelWatchers={setActiveReaders}
                 />
             </main>
         </div>

@@ -646,6 +646,71 @@ def create_or_join_channel_by_isbn():
         return jsonify({"message": f"Error creating/joining channel: {str(e)}"}), 500
 
 
+@api.route("/chat/channel-members-by-isbn", methods=["GET"])
+def get_channel_members_by_isbn():
+    """
+    Returns members (with id, name, image) of the book channel for the given ISBN.
+    Used by Home to show real avatars of users who have been active in that book's chat.
+    """
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"message": "Missing or invalid Authorization header"}), 401
+
+    token = auth_header.split(" ")[1]
+    user_id = verify_token(token)
+
+    if not user_id:
+        return jsonify({"message": "Invalid or expired token"}), 401
+
+    isbn = normalize_isbn(request.args.get("isbn"))
+    if not isbn:
+        return jsonify({"message": "isbn is required"}), 400
+
+    channel_id = f"book-isbn-{isbn}"
+    channel_cid = f"messaging:{channel_id}"
+
+    try:
+        client = get_stream_client()
+        channel = client.channel("messaging", channel_id)
+        result = channel.query_members(limit=50)
+        members_data = result.get("members", [])
+        users = []
+        for m in members_data:
+            u = m.get("user") or m
+            user_id_str = u.get("id") or m.get("user_id")
+            if not user_id_str:
+                continue
+            users.append({
+                "id": str(user_id_str),
+                "name": u.get("name") or str(user_id_str),
+                "image": u.get("image"),
+            })
+        return jsonify({"members": users, "count": len(users)}), 200
+    except AttributeError:
+        try:
+            result = client.query_members(
+                filter_conditions={"cid": channel_cid},
+                limit=50,
+            )
+            members_data = result.get("members", [])
+            users = []
+            for m in members_data:
+                u = m.get("user") or m
+                user_id_str = u.get("id") or m.get("user_id")
+                if not user_id_str:
+                    continue
+                users.append({
+                    "id": str(user_id_str),
+                    "name": u.get("name") or str(user_id_str),
+                    "image": u.get("image"),
+                })
+            return jsonify({"members": users, "count": len(users)}), 200
+        except Exception as e:
+            return jsonify({"message": f"Error fetching channel members: {str(e)}"}), 500
+    except Exception as e:
+        return jsonify({"message": f"Error fetching channel members: {str(e)}"}), 500
+
+
 @api.route("/library/<int:user_id>/books", methods=["GET"])
 def get_user_library(user_id):
     user = User.query.get(user_id)

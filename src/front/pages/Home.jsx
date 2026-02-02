@@ -29,6 +29,7 @@ export const Home = () => {
 
   const [uiMessage, setUiMessage] = useState(null);
   const [chatLoading, setChatLoading] = useState(false);
+  const [activeReaders, setActiveReaders] = useState([]);
 
   const bentoRef = useRef(null);
   const spotlightRef = useRef(null);
@@ -230,6 +231,31 @@ export const Home = () => {
     return () => window.removeEventListener("local-storage-changed", syncBook);
   }, []);
 
+  useEffect(() => {
+    const isbn = normalizeIsbn(selectedBook?.isbn);
+    if (!isbn || !backendUrl) {
+      setActiveReaders([]);
+      return;
+    }
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setActiveReaders([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`${backendUrl}/api/chat/channel-members-by-isbn?isbn=${encodeURIComponent(isbn)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : { members: [] }))
+      .then((data) => {
+        if (!cancelled && Array.isArray(data.members)) setActiveReaders(data.members);
+      })
+      .catch(() => {
+        if (!cancelled) setActiveReaders([]);
+      });
+    return () => { cancelled = true; };
+  }, [selectedBook?.isbn, backendUrl]);
+
   const handleAddEvent = (newEvent) => {
     dispatch({ type: "add_event", payload: newEvent });
 
@@ -417,35 +443,38 @@ export const Home = () => {
                 >
                   <h6 className="fw-bold">Like-minded readers</h6>
 
-                  <div className="d-flex my-2">
-                    <img
-                      src="https://i.pravatar.cc/150?img=47"
-                      alt="reader avatar"
-                      className="rounded-circle border border-white"
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        objectFit: "cover",
-                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                        border: "2px solid white"
-                      }}
-                    />
-                    <img
-                      src="https://i.pravatar.cc/150?img=12"
-                      alt="reader avatar"
-                      className="rounded-circle border border-white"
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        marginLeft: "-12px",
-                        objectFit: "cover",
-                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                        border: "2px solid white"
-                      }}
-                    />
+                  <div className="d-flex my-2 align-items-center">
+                    {activeReaders.length > 0 ? (
+                      activeReaders.slice(0, 6).map((user, i) => (
+                        <img
+                          key={user.id}
+                          src={user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.id)}&background=8b1a30&color=fff`}
+                          alt={user.name || user.id}
+                          className="rounded-circle border border-white"
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            marginLeft: i === 0 ? 0 : "-12px",
+                            objectFit: "cover",
+                            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                            border: "2px solid white"
+                          }}
+                          title={user.name || user.id}
+                          onError={(e) => {
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.id)}&background=8b1a30&color=fff`;
+                          }}
+                        />
+                      ))
+                    ) : (
+                      <span className="small text-muted">Those who open the chat for this book will appear here</span>
+                    )}
                   </div>
 
-                  <p className="small text-muted">"Aure and 12 others are here."</p>
+                  <p className="small text-muted">
+                    {activeReaders.length === 0 && "Open the chat to join the conversation."}
+                    {activeReaders.length === 1 && "1 reader in this conversation."}
+                    {activeReaders.length > 1 && `${activeReaders.length} readers in this conversation.`}
+                  </p>
 
                   <button className="btn btn-wine w-100 py-2 mt-auto rounded-3" onClick={handleOpenChat} disabled={chatLoading}>
                     {chatLoading ? "Opening..." : "Open Chat"}
