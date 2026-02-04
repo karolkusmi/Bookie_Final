@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import CreateEventModal from "../components/CreateEventModal";
 import EventDetailsModal from "../components/EventDetailsModal";
 import BookLibraryModal from "../components/BookLibraryModal";
@@ -15,15 +15,20 @@ const normalizeIsbn = (isbn) => (isbn || "").replaceAll("-", "").replaceAll(" ",
 export const Home = () => {
   const { store, dispatch } = useGlobalReducer();
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const [eventList, setEventList] = useState(store.initialEventList || []);
   const [isEventDetailsOpen, setIsEventDetailsOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
+  const DEFAULT_EVENTS_VISIBLE = 4;
+  const [isExpandedEvents, setIsExpandedEvents] = useState(false);
 
   const navigate = useNavigate();
-  const { updateProfile, userData } = useUser();
+  const { userData } = useUser();
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const backendUrl = import.meta.env.VITE_BACKEND_URL
+    ? (import.meta.env.VITE_BACKEND_URL.endsWith("/")
+        ? import.meta.env.VITE_BACKEND_URL.slice(0, -1)
+        : import.meta.env.VITE_BACKEND_URL)
+    : "";
 
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [modalMode, setModalMode] = useState("library"); // "prologue" | "library"
@@ -43,6 +48,45 @@ export const Home = () => {
   const bentoRef = useRef(null);
   const spotlightRef = useRef(null);
 
+  // --- Flujo de eventos: API → store → todos ordenados; por defecto 4 más próximos (futuros), botón muestra todos / vuelve a 4 ---
+  // 1) nextEventsSorted: todos con fecha válida, ordenados por fecha/hora; se mantiene _sortDate para filtrar próximos.
+  // 2) upcomingEvents: solo eventos con fecha >= ahora (los más próximos a hoy).
+  // 3) Por defecto se muestran los 4 más próximos; al hacer click en "View more events" se muestran todos; "View less events" vuelve a 4.
+  const nextEventsSorted = useMemo(() => {
+    const list = store.eventGlobalList || [];
+    const now = new Date();
+    const withDate = list
+      .map((ev) => {
+        const dateStr = ev.date != null ? String(ev.date).trim() : "";
+        const rawTime = ev.time != null ? String(ev.time).trim() : "00:00";
+        const timeStr = rawTime.length >= 5 ? rawTime.slice(0, 5) : rawTime.padStart(5, "0");
+        const iso =
+          dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && /^\d{1,2}:\d{2}$/.test(timeStr)
+            ? `${dateStr}T${timeStr.length === 4 ? "0" + timeStr : timeStr}:00`
+            : null;
+        const dt = iso ? new Date(iso) : null;
+        return { ...ev, _sortDate: dt };
+      })
+      .filter((ev) => ev._sortDate && !isNaN(ev._sortDate.getTime()));
+    const sorted = [...withDate].sort((a, b) => a._sortDate - b._sortDate);
+    return sorted;
+  }, [store.eventGlobalList]);
+
+  const upcomingEvents = useMemo(() => {
+    const now = new Date();
+    return nextEventsSorted.filter((ev) => ev._sortDate >= now);
+  }, [nextEventsSorted]);
+
+  const visibleEvents = isExpandedEvents
+    ? nextEventsSorted
+    : upcomingEvents.slice(0, DEFAULT_EVENTS_VISIBLE);
+  const totalEvents = nextEventsSorted.length;
+  const showEventsToggle = totalEvents > DEFAULT_EVENTS_VISIBLE;
+
+  const handleViewMoreEvents = () => {
+    setIsExpandedEvents((prev) => !prev);
+  };
+
   const enableSpotlight = true;
   const enableBorderGlow = true;
   const enableTilt = true;
@@ -53,14 +97,26 @@ export const Home = () => {
   const getUserId = () => {
     const fromCtx = userData?.id;
     if (fromCtx) return fromCtx;
-    const saved = JSON.parse(localStorage.getItem("user_data") || "null");
-    return saved?.id || null;
+    const raw = localStorage.getItem("user_data");
+    if (!raw || raw === "undefined" || raw === "null") return null;
+    try {
+      const saved = JSON.parse(raw);
+      return saved?.id ?? null;
+    } catch {
+      return null;
+    }
   };
 
   const getPrefsKey = () => {
     const uid = getUserId();
     return uid ? `profile_prefs_${uid}` : null;
   };
+
+
+
+
+
+
 
   const loadPrefs = () => {
     const key = getPrefsKey();
@@ -142,14 +198,11 @@ export const Home = () => {
   };
 
   const addBookToLibrary = async (book) => {
-    const user = JSON.parse(localStorage.getItem("user_data"));
-    const userId = user?.id;
-
+    const userId = getUserId();
     if (!userId) {
       setUiMessage({ type: "danger", text: "No hay usuario activo. Inicia sesión de nuevo." });
       return;
     }
-
     if (!backendUrl) {
       setUiMessage({ type: "danger", text: "No está configurado VITE_BACKEND_URL." });
       return;
@@ -192,22 +245,6 @@ export const Home = () => {
       setUiMessage({ type: "danger", text: e.message });
     }
   };
-
-  const loadGlobalEvents = () => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("event_global_list") || "[]");
-      if (Array.isArray(saved) && saved.length) return saved;
-    } catch (e) {}
-    if (Array.isArray(store.eventGlobalList) && store.eventGlobalList.length) return store.eventGlobalList;
-    return store.initialEventList || [];
-  };
-
-  useEffect(() => {
-    setEventList(loadGlobalEvents());
-    const sync = () => setEventList(loadGlobalEvents());
-    window.addEventListener("local-storage-changed", sync);
-    return () => window.removeEventListener("local-storage-changed", sync);
-  }, [store.eventGlobalList, store.initialEventList]);
 
   useEffect(() => {
     if (!enableSpotlight) return;
@@ -308,16 +345,6 @@ export const Home = () => {
   }, [enableTilt, clickEffect]);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("selected_book");
-      if (saved) setSelectedBook(JSON.parse(saved));
-      updateProfile(JSON.parse(localStorage.getItem("user_data")));
-    } catch (e) {
-      localStorage.removeItem("selected_book");
-    }
-  }, []);
-
-  useEffect(() => {
     const syncBook = () => {
       const saved = localStorage.getItem("selected_book");
       if (!saved) {
@@ -339,6 +366,32 @@ export const Home = () => {
       setTop3([prefs.top3[0] || null, prefs.top3[1] || null, prefs.top3[2] || null]);
     }
   }, [userData?.id]);
+
+  // Sin backend no hacemos fetch; marcar como cargado para no bloquear la UI (skeletons infinitos)
+  useEffect(() => {
+    if (!backendUrl) setEventsLoaded(true);
+  }, [backendUrl]);
+
+  // Carga inicial de eventos: una sola vez por sesión; resultado en store.eventGlobalList (y localStorage)
+  useEffect(() => {
+    if (!backendUrl || eventsLoaded) return;
+    let cancelled = false;
+    fetch(`${backendUrl}/api/events`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => {
+        if (cancelled || !Array.isArray(data)) return;
+        const mapped = data.map((e) => ({
+          ...e,
+          icon: e.category || "📖",
+          date: e.date,
+          time: e.time,
+        }));
+        dispatch({ type: "set_events", payload: mapped });
+        setEventsLoaded(true);
+      })
+      .catch(() => setEventsLoaded(true));
+    return () => { cancelled = true; };
+  }, [backendUrl, eventsLoaded, dispatch]);
 
   useEffect(() => {
     const isbn = normalizeIsbn(selectedBook?.isbn);
@@ -371,25 +424,6 @@ export const Home = () => {
 
   const handleAddEvent = (newEvent) => {
     dispatch({ type: "add_event", payload: newEvent });
-
-    try {
-      const current = JSON.parse(localStorage.getItem("event_global_list") || "[]");
-      const id =
-        newEvent?.id ??
-        newEvent?.event_id ??
-        newEvent?._id ??
-        `${(newEvent?.title || "event").slice(0, 20)}-${Date.now()}`;
-      const withId = { ...newEvent, id };
-
-      const exists = current.some((e) => (e.id ?? e.event_id ?? e._id) === id);
-      const next = exists
-        ? current.map((e) => ((e.id ?? e.event_id ?? e._id) === id ? { ...e, ...withId } : e))
-        : [...current, withId];
-
-      localStorage.setItem("event_global_list", JSON.stringify(next));
-      window.dispatchEvent(new Event("local-storage-changed"));
-      setEventList(next);
-    } catch (e) {}
   };
 
   const makeChannelIdFromIsbn = (isbn) => {
@@ -515,199 +549,221 @@ export const Home = () => {
       >
         {enableSpotlight && <div ref={spotlightRef} className="home-global-spotlight" aria-hidden="true" />}
 
-        <div className="row g-3 mx-0 home-row justify-content-center align-items-start">
-          <div className="card-shadow col-12 col-lg-5 left-container">
-            <section className="mb-5">
-              <div className="d-flex justify-content-between align-items-center mb-4">
-                <h5 className="fw-bold mb-0 glitch-title" data-text="READING NOW">
-                  READING NOW
-                </h5>
-                <button
-                  type="button"
-                  className="home-search-btn"
-                  onClick={openLibrary}
-                  aria-label="Buscar o cambiar libro"
-                  title="Buscar o cambiar libro"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.35-4.35" />
-                  </svg>
-                </button>
-              </div>
-
-              {uiMessage && (
-                <div className={`alert alert-${uiMessage.type} py-2`} role="alert">
-                  {uiMessage.text}
-                </div>
-              )}
-
-              <div className="reading-now-row">
-                <div className="home-book-wrap">
-                  <button
-                    type="button"
-                    className={`card border-0 shadow-sm p-3 text-center mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
-                    style={{ borderRadius: "var(--card-radius)", width: "180px", cursor: "pointer" }}
-                    onClick={openPrologue}
-                  >
-                    <div className="book-card-img shadow-sm">
-                      <img
-                        src={selectedBook?.thumbnail || portadaLibro}
-                        alt={selectedBook?.title || "Book cover"}
-                        className="w-100 h-100 object-fit-cover"
-                        onError={(e) => (e.currentTarget.style.display = "none")}
-                      />
-                    </div>
-
-                    <span className="fw-bold small">{selectedBook?.title || "Your Book !!"}</span>
-
-                    {selectedBook?.isbn && (
-                      <div className="text-muted" style={{ fontSize: "0.7rem" }}>
-                        ISBN: {selectedBook.isbn}
-                      </div>
-                    )}
-                  </button>
-                </div>
-
-                <div
-                  className={`reading-readers-card card border-0 shadow-sm p-3 mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
-                  style={{ borderRadius: "var(--card-radius)" }}
-                >
-                  <h6 className="fw-bold mb-2">Like-minded readers</h6>
-
-                  <div className="d-flex my-2 align-items-center flex-wrap gap-1">
-                    {activeReaders.length > 0 ? (
-                      activeReaders.slice(0, 6).map((user, i) => (
-                        <img
-                          key={user.id}
-                          src={
-                            user.image ||
-                            `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.id)}&background=8b1a30&color=fff`
-                          }
-                          alt={user.name || user.id}
-                          className="rounded-circle border border-white"
-                          style={{
-                            width: "32px",
-                            height: "32px",
-                            objectFit: "cover",
-                            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                            border: "2px solid white",
-                          }}
-                          title={user.name || user.id}
-                          onError={(e) => {
-                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              user.name || user.id
-                            )}&background=8b1a30&color=fff`;
-                          }}
-                        />
-                      ))
-                    ) : (
-                      <span className="small text-muted">Those who open the chat will appear here</span>
-                    )}
+        <div className="row g-3 mx-0 home-row justify-content-center align-items-stretch">
+          <div className="card-shadow col-12 col-lg-5 left-container home-left-column" style={{ minHeight: "420px" }}>
+            {!eventsLoaded ? (
+              <>
+                <section className="mb-5">
+                  <div className="home-skeleton home-skeleton-title" style={{ width: "60%", height: 28, marginBottom: "1.5rem" }} />
+                  <div className="reading-now-row">
+                    <div className="home-skeleton home-skeleton-book-card" style={{ width: 180, height: 260, borderRadius: "var(--card-radius)" }} />
+                    <div className="home-skeleton home-skeleton-readers-card" style={{ flex: 1, height: 200, borderRadius: "var(--card-radius)", minWidth: 180 }} />
+                  </div>
+                </section>
+                <section>
+                  <div className="home-skeleton home-skeleton-title" style={{ width: "70%", height: 28, marginBottom: "1rem" }} />
+                  <div className="d-flex flex-column gap-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="home-skeleton home-skeleton-top3-row" style={{ height: 100, borderRadius: "var(--card-radius)" }} />
+                    ))}
+                  </div>
+                </section>
+              </>
+            ) : (
+              <>
+                <section className="mb-5">
+                  <div className="d-flex justify-content-between align-items-center mb-4">
+                    <h5 className="fw-bold mb-0 glitch-title" data-text="READING NOW">
+                      READING NOW
+                    </h5>
+                    <button
+                      type="button"
+                      className="home-search-btn"
+                      onClick={openLibrary}
+                      aria-label="Buscar o cambiar libro"
+                      title="Buscar o cambiar libro"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                      </svg>
+                    </button>
                   </div>
 
-                  <p className="small text-muted mb-2">
-                    {activeReaders.length === 0 && "Open the chat to join."}
-                    {activeReaders.length === 1 && "1 reader in this conversation."}
-                    {activeReaders.length > 1 && `${activeReaders.length} readers in this conversation.`}
-                  </p>
+                  {uiMessage && (
+                    <div className={`alert alert-${uiMessage.type} py-2`} role="alert">
+                      {uiMessage.text}
+                    </div>
+                  )}
 
-                  <button className="btn btn-wine w-100 py-2 rounded-3" onClick={handleOpenChat} disabled={chatLoading}>
-                    {chatLoading ? "Opening..." : "Open Chat"}
-                  </button>
-                </div>
-              </div>
-            </section>
+                  <div className="reading-now-row">
+                    <div className="home-book-wrap">
+                      <button
+                        type="button"
+                        className={`card border-0 shadow-sm p-3 text-center mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
+                        style={{ borderRadius: "var(--card-radius)", width: "180px", cursor: "pointer" }}
+                        onClick={openPrologue}
+                      >
+                        <div className="book-card-img shadow-sm">
+                          <img
+                            src={selectedBook?.thumbnail || portadaLibro}
+                            alt={selectedBook?.title || "Book cover"}
+                            className="w-100 h-100 object-fit-cover"
+                            onError={(e) => (e.currentTarget.style.display = "none")}
+                          />
+                        </div>
 
-            <section>
-              <h5 className="fw-bold mb-4 glitch-title" data-text="TOP 3 FAVORITE BOOKS">
-                TOP 3 FAVORITE BOOKS
-              </h5>
+                        <span className="fw-bold small">{selectedBook?.title || "Your Book !!"}</span>
 
-              <div className="d-flex flex-column gap-3">
-                {[0, 1, 2].map((idx) => {
-                  const b = top3[idx];
-                  return (
+                        {selectedBook?.isbn && (
+                          <div className="text-muted home-isbn-text">
+                            ISBN: {selectedBook.isbn}
+                          </div>
+                        )}
+                      </button>
+                    </div>
+
                     <div
-                      key={idx}
-                      className={`card border-0 shadow-sm p-3 mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
+                      className={`reading-readers-card card border-0 shadow-sm p-3 mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
                       style={{ borderRadius: "var(--card-radius)" }}
                     >
-                      <div className="d-flex gap-3 align-items-start">
-                        {b ? (
-                          <>
+                      <h6 className="fw-bold mb-2">Like-minded readers</h6>
+
+                      <div className="d-flex my-2 align-items-center flex-wrap gap-1">
+                        {activeReaders.length > 0 ? (
+                          activeReaders.slice(0, 6).map((user, i) => (
                             <img
-                              src={b.thumbnail || "https://via.placeholder.com/80x110"}
-                              alt={b.title}
-                              style={{ width: 60, height: 85, objectFit: "cover", borderRadius: 10 }}
-                            />
-                            <div className="flex-grow-1">
-                              <div className="fw-bold" style={{ color: "#231B59", fontSize: "0.7rem" }}>
-                                Top {idx + 1}
-                              </div>
-                              <div className="fw-bold" style={{ fontSize: "0.9rem", color: "#231B59" }}>
-                                {b.title}
-                              </div>
-                              <div className="text-muted" style={{ fontSize: "0.8rem" }}>
-                                {getAuthorsArray(b).join(", ")}
-                              </div>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div
+                              key={user.id}
+                              src={
+                                user.image ||
+                                `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.id)}&background=8b1a30&color=fff`
+                              }
+                              alt={user.name || user.id}
+                              className="rounded-circle border border-white"
                               style={{
-                                width: 60,
-                                height: 85,
-                                backgroundColor: "#f0f0f0",
-                                borderRadius: 10,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
+                                width: "32px",
+                                height: "32px",
+                                objectFit: "cover",
+                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                                border: "2px solid white",
                               }}
-                            >
-                              📚
-                            </div>
-                            <div className="flex-grow-1">
-                              <div className="fw-bold small">Top {idx + 1}</div>
-                              <div className="text-muted small">Elige un libro</div>
-                            </div>
-                          </>
+                              title={user.name || user.id}
+                              onError={(e) => {
+                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                  user.name || user.id
+                                )}&background=8b1a30&color=fff`;
+                              }}
+                            />
+                          ))
+                        ) : (
+                          <span className="small text-muted">Those who open the chat will appear here</span>
                         )}
-                        <div className="d-flex flex-column gap-2">
-                          <button
-                            className="btn btn-sm btn-wine"
-                            onClick={() => {
-                              setPickerMode("top3");
-                              setActiveSlot(idx);
-                              fetchLibrary();
-                              setIsBookModalOpen(true);
-                            }}
-                          >
-                            {b ? "Cambiar" : "Añadir"}
-                          </button>
-                          {b && (
-                            <button className="btn btn-sm btn-outline-danger" onClick={() => clearTop3Slot(idx)}>
-                              Quitar
-                            </button>
-                          )}
-                        </div>
                       </div>
+
+                      <p className="small text-muted mb-2">
+                        {activeReaders.length === 0 && "Open the chat to join."}
+                        {activeReaders.length === 1 && "1 reader in this conversation."}
+                        {activeReaders.length > 1 && `${activeReaders.length} readers in this conversation.`}
+                      </p>
+
+                      <button className="btn btn-wine w-100 py-2 rounded-3" onClick={handleOpenChat} disabled={chatLoading}>
+                        {chatLoading ? "Opening..." : "Open Chat"}
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            </section>
+                  </div>
+                </section>
+
+                <section>
+                  <h5 className="fw-bold mb-4 glitch-title" data-text="TOP 3 FAVORITE BOOKS">
+                    TOP 3 FAVORITE BOOKS
+                  </h5>
+
+                  <div className="d-flex flex-column gap-3">
+                    {[0, 1, 2].map((idx) => {
+                      const b = top3[idx];
+                      return (
+                        <div
+                          key={idx}
+                          className={`card border-0 shadow-sm p-3 mb-card ${enableBorderGlow ? "mb-border-glow" : ""}`}
+                          style={{ borderRadius: "var(--card-radius)" }}
+                        >
+                          <div className="d-flex gap-3 align-items-start">
+                            {b ? (
+                              <>
+                                <img
+                                  src={b.thumbnail || "https://via.placeholder.com/80x110"}
+                                  alt={b.title}
+                                  style={{ width: 60, height: 85, objectFit: "cover", borderRadius: 10 }}
+                                />
+                                <div className="flex-grow-1">
+                                  <div className="fw-bold" style={{ color: "#231B59", fontSize: "0.7rem" }}>
+                                    Top {idx + 1}
+                                  </div>
+                                  <div className="fw-bold" style={{ fontSize: "0.9rem", color: "#231B59" }}>
+                                    {b.title}
+                                  </div>
+                                  <div className="text-muted" style={{ fontSize: "0.8rem" }}>
+                                    {getAuthorsArray(b).join(", ")}
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div
+                                  style={{
+                                    width: 60,
+                                    height: 85,
+                                    backgroundColor: "#f0f0f0",
+                                    borderRadius: 10,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  📚
+                                </div>
+                                <div className="flex-grow-1">
+                                  <div className="fw-bold small">Top {idx + 1}</div>
+                                  <div className="text-muted small">Elige un libro</div>
+                                </div>
+                              </>
+                            )}
+                            <div className="d-flex flex-column gap-2">
+                              <button
+                                className="btn btn-sm btn-wine"
+                                onClick={() => {
+                                  setPickerMode("top3");
+                                  setActiveSlot(idx);
+                                  fetchLibrary();
+                                  setIsBookModalOpen(true);
+                                }}
+                              >
+                                {b ? "Cambiar" : "Añadir"}
+                              </button>
+                              {b && (
+                                <button className="btn btn-sm btn-outline-danger" onClick={() => clearTop3Slot(idx)}>
+                                  Quitar
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              </>
+            )}
           </div>
 
           <div className="card-shadow col-12 col-lg-6 right-container">
@@ -739,46 +795,80 @@ export const Home = () => {
               </button>
             </div>
 
-            <div className="row g-3">
-              {eventList.map((ev, index) => (
-                <div className="col-md-6" key={ev.id || index}>
-                  <div
-                    className={`card border-0 shadow-sm p-3 d-flex flex-row align-items-center event-card mb-card ${
-                      enableBorderGlow ? "mb-border-glow" : ""
-                    }`}
-                    style={{ borderRadius: "15px" }}
-                  >
-                    <div
-                      className="rounded-circle p-3 me-3 fs-4 d-flex align-items-center justify-content-center"
-                      style={{
-                        backgroundColor: "var(--book-lavender)",
-                        width: "56px",
-                        height: "56px",
-                        boxShadow: "0 4px 12px rgba(139, 26, 48, 0.15)",
-                        transition: "all 0.3s ease",
-                      }}
-                    >
-                      {ev.icon}
-                    </div>
-                    <div className="flex-grow-1 text-start">
-                      <h6 className="fw-bold mb-0 small">{ev.title}</h6>
-                      <p className="text-muted mb-0" style={{ fontSize: "0.7rem" }}>
-                        {ev.date}
-                      </p>
-                    </div>
-                    <button
-                      className="btn btn-wine btn-sm rounded-pill px-3"
-                      onClick={() => {
-                        setSelectedEvent(ev);
-                        setIsEventDetailsOpen(true);
-                      }}
-                    >
-                      View More
-                    </button>
+            <div className="home-events-block" style={{ minHeight: "280px" }}>
+              {!eventsLoaded ? (
+                <>
+                  <div className="row g-3">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div className="col-md-6" key={i}>
+                        <div className="home-skeleton home-skeleton-event-card" />
+                      </div>
+                    ))}
                   </div>
+                </>
+              ) : totalEvents === 0 ? (
+                <div className="home-events-empty">
+                  <span className="home-events-empty-emoji" aria-hidden>📅</span>
+                  <p className="home-events-empty-text">We don&apos;t have any events yet.</p>
+                  <p className="home-events-empty-sub">Create one with the + button above!</p>
                 </div>
-              ))}
+              ) : (
+                <div className="row g-3">
+                  {visibleEvents.map((ev, index) => (
+                    <div className="col-md-6" key={ev.id || index}>
+                      <div
+                        className={`card border-0 shadow-sm p-3 d-flex flex-row align-items-center event-card mb-card ${
+                          enableBorderGlow ? "mb-border-glow" : ""
+                        }`}
+                        style={{ borderRadius: "15px" }}
+                      >
+                        <div
+                          className="rounded-circle p-3 me-3 fs-4 d-flex align-items-center justify-content-center"
+                          style={{
+                            backgroundColor: "var(--book-lavender)",
+                            width: "56px",
+                            height: "56px",
+                            boxShadow: "0 4px 12px rgba(139, 26, 48, 0.15)",
+                            transition: "all 0.3s ease",
+                          }}
+                        >
+                          {ev.icon}
+                        </div>
+                        <div className="flex-grow-1 text-start">
+                          <h6 className="fw-bold mb-0 small">{ev.title}</h6>
+                          <p className="text-muted mb-0" style={{ fontSize: "0.7rem" }}>
+                            {ev.date}
+                          </p>
+                        </div>
+                        <button
+                          className="btn btn-wine btn-sm rounded-pill px-3"
+                          onClick={() => {
+                            setSelectedEvent(ev);
+                            setIsEventDetailsOpen(true);
+                          }}
+                        >
+                          View More
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {eventsLoaded && showEventsToggle && (
+              <div className="d-flex justify-content-center mt-4">
+                <button
+                  type="button"
+                  className="home-search-btn home-view-more-events-btn"
+                  onClick={handleViewMoreEvents}
+                  aria-label={isExpandedEvents ? "Ver menos eventos" : "Ver más eventos"}
+                  title={isExpandedEvents ? "View less events" : "View more events"}
+                >
+                  {isExpandedEvents ? "View less events" : "View more events"}
+                </button>
+              </div>
+            )}
 
             {/* --- INICIO WIDGET SPOTIFY --- */}
             <div className="mt-4 mb-4">

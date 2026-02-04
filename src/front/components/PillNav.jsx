@@ -14,7 +14,7 @@ const PillNav = ({
   ease = "power3.easeOut",
   baseColor = "#231B59",
   pillColor = "#ffffff",
-  hoveredPillTextColor = "#231B59",
+  hoveredPillTextColor = "#ffffff",
   pillTextColor,
   onLogoClick,
   initialLoadAnimation = true,
@@ -149,6 +149,24 @@ const PillNav = ({
     activeTweenRefs.current[i] = tl.tweenTo(0, { duration: 0.2, ease, overwrite: "auto" });
   };
 
+  const handleLogOut = () => {
+    setMenuOpen(false);
+    if (onLogout) {
+      onLogout();
+      return;
+    }
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user_data");
+    localStorage.removeItem("event_global_list");
+    localStorage.removeItem("selected_book");
+    localStorage.removeItem("stream_token");  
+    localStorage.removeItem("prefile_prefs_32");    
+    localStorage.removeItem("prefile_prefs_59");    
+    
+    navigate("/login");
+  };
+
   const handleLogoEnter = () => {
     const img = logoImgRef.current;
     if (!img) return;
@@ -224,12 +242,7 @@ const PillNav = ({
             type="button"
             className="pill-dropdown-item pill-dropdown-button"
             role="menuitem"
-            onClick={() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              setMenuOpen(false);
-              navigate("/login");
-            }}
+            onClick={handleLogOut}
           >
             Log out
           </button>
