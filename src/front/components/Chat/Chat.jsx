@@ -16,6 +16,7 @@ import Toastify from 'toastify-js';
 import 'toastify-js/src/toastify.css';
 import "./Chat.css";
 
+import { useUser } from "../UserContext";
 import {
     getStreamClient,
     connectUser,
@@ -31,14 +32,14 @@ import {
 } from "./utiles/chat_logic";
 
 /**
- * Main Chat component that wraps Stream Chat functionality
+ * Componente principal de Chat que envuelve la funcionalidad de Stream Chat
  * @param {Object} props
- * @param {string} props.channelId - Optional specific channel to open
- * @param {string} props.bookTitle - Optional book title for display
- * @param {Function} props.onJoinChannel - Callback when user joins a channel
- * @param {Function} props.onCloseChannel - Callback when user closes a channel
+ * @param {string} props.channelId - Canal específico a abrir (opcional)
+ * @param {string} props.bookTitle - Título del libro para mostrar (opcional)
+ * @param {Function} props.onJoinChannel - Callback cuando el usuario se une a un canal
+ * @param {Function} props.onCloseChannel - Callback cuando el usuario cierra un canal
  */
-// Helper function to show error toast
+// Función auxiliar para mostrar un toast de error
 const showErrorToast = (message) => {
     Toastify({
         text: message,
@@ -56,8 +57,8 @@ const showErrorToast = (message) => {
 };
 
 /**
- * Inner component that must render inside <Channel>.
- * Reports current watchers/members to parent so Chat1 can show real avatars.
+ * Componente interno que debe renderizarse dentro de <Channel>.
+ * Informa al componente padre de los watchers/miembros actuales para que Chat1 pueda mostrar avatares reales.
  */
 function ChannelWatchersReporter({ onWatchers }) {
     const { channel } = useChannelStateContext();
@@ -101,6 +102,7 @@ function ChannelWatchersReporter({ onWatchers }) {
 }
 
 const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onCloseChannel = null, onChannelWatchers = null }) => {
+    const { userData } = useUser();
     const [client, setClient] = useState(null);
     const [channel, setChannel] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -118,12 +120,9 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
                 setIsLoading(true);
                 setError(null);
 
-                // Get stored credentials
                 const streamToken = localStorage.getItem("stream_token");
-                const userDataStr = localStorage.getItem("user_data");
                 const accessToken = localStorage.getItem("access_token");
 
-                // Check basic authentication
                 if (!accessToken) {
                     const msg = "No estás autenticado. Por favor, inicia sesión.";
                     setError(msg);
@@ -132,8 +131,14 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
                     return;
                 }
 
-                // Check Stream-specific credentials
-                if (!streamToken || !userDataStr) {
+                if (!userData?.id) {
+                    const msg = "Cargando sesión…";
+                    setError(msg);
+                    setIsLoading(false);
+                    return;
+                }
+
+                if (!streamToken) {
                     const msg = "Error de configuración del chat. Por favor, cierra sesión y vuelve a iniciar.";
                     setError(msg);
                     showErrorToast(msg);
@@ -141,7 +146,6 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
                     return;
                 }
 
-                const userData = JSON.parse(userDataStr);
                 const streamClient = getStreamClient();
 
                 if (!streamClient) {
@@ -152,19 +156,28 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
                     return;
                 }
 
-                // Connect user if not already connected
                 if (!isUserConnected()) {
                     await connectUser(
                         userData.id,
-                        userData.username,
-                        streamToken
+                        userData.username || String(userData.id),
+                        streamToken,
+                        userData.image_avatar || null
                     );
                 }
 
                 setClient(streamClient);
 
-                // If a specific channel is requested, ensure we're a member before watch (evita 403)
+                // Si se solicita un canal específico, sincronizar avatares desde la BD y luego abrir canal
                 if (channelId) {
+                    const backendUrl = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
+                    if (backendUrl && accessToken) {
+                        try {
+                            await fetch(
+                                `${backendUrl}/api/chat/sync-channel-avatars?channel_id=${encodeURIComponent(channelId)}`,
+                                { headers: { Authorization: `Bearer ${accessToken}` } }
+                            );
+                        } catch (_) {}
+                    }
                     if (channelId.startsWith("book-")) {
                         try {
                             await joinBookChannel(channelId);
@@ -189,14 +202,14 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
 
         initChat();
 
-        // Cleanup on unmount
+        // Limpieza al desmontar el componente
         return () => {
-            // Don't disconnect on unmount - let the app handle this
+            // No desconectar al desmontar: que lo gestione la app principal
             // disconnectUser();
         };
-    }, [channelId]);
+    }, [channelId, userData?.id, userData?.username, userData?.image_avatar]);
 
-    // Load public book channels when no specific channel is selected
+    // Cargar canales públicos de libros cuando no hay un canal específico seleccionado
     useEffect(() => {
         const loadPublicChannels = async () => {
             if (!client || channelId) return;
@@ -215,7 +228,7 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
         loadPublicChannels();
     }, [client, channelId]);
 
-    // Handle joining a public channel
+    // Gestionar la unión a un canal público
     const handleJoinPublicChannel = async (channelToJoin) => {
         const channelIdToJoin = channelToJoin.id;
         setJoiningChannelId(channelIdToJoin);
@@ -237,7 +250,7 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
         }
     };
 
-    // Handle closing current channel (go back to list)
+    // Gestionar el cierre del canal actual (volver a la lista)
     const handleCloseChannel = () => {
         setChannel(null);
         setShowChannelActions(false);
@@ -246,7 +259,7 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
         }
     };
 
-    // Handle leaving a channel (remove from members)
+    // Gestionar abandonar un canal (eliminar al usuario de los miembros)
     const handleLeaveChannel = async () => {
         if (!channel) return;
 
@@ -272,7 +285,7 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
         }
     };
 
-    // Handle deleting a channel (only creator)
+    // Gestionar la eliminación de un canal (solo el creador)
     const handleDeleteChannel = async () => {
         if (!channel) return;
 
@@ -298,7 +311,7 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
         }
     };
 
-    // Refresh public channels list
+    // Actualizar la lista de canales públicos
     const refreshPublicChannels = async () => {
         if (!client) return;
         setLoadingChannels(true);
@@ -312,7 +325,7 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
         }
     };
 
-    // Loading state
+    // Estado de carga
     if (isLoading) {
         return (
             <div className="chat-loading">
@@ -322,7 +335,7 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
         );
     }
 
-    // Error state
+    // Estado de error
     if (error) {
         return (
             <div className="chat-error">
@@ -331,7 +344,7 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
         );
     }
 
-    // No client
+    // Sin cliente
     if (!client) {
         return (
             <div className="chat-error">
@@ -340,14 +353,14 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
         );
     }
 
-    // Filters for channel list (user's channels)
+    // Filtros para la lista de canales (canales del usuario)
     const filters = {
         type: "messaging",
         members: { $in: [client.userID] }
     };
     const sort = [{ last_message_at: -1 }];
 
-    // Render public channels list
+    // Renderizar la lista de canales públicos
     const renderPublicChannelsList = () => {
         if (loadingChannels) {
             return (
@@ -418,7 +431,7 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
     return (
         <div className="stream-chat-container">
             <StreamChatComponent client={client} theme="str-chat__theme-light">
-                {/* If no specific channel, show public channels list */}
+                {/* Si no hay un canal específico, mostrar la lista de canales públicos */}
                 {!channel ? (
                     <div className="chat-with-list">
                         <div className="my-channels-section">
@@ -442,7 +455,7 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
                     </div>
                 ) : (
                     <div className="active-channel-container">
-                        {/* Channel action bar */}
+                        {/* Barra de acciones del canal */}
                         <div className="channel-action-bar">
                             <button
                                 className="channel-action-btn back"
@@ -466,7 +479,7 @@ const Chat = ({ channelId = null, bookTitle = null, onJoinChannel = null, onClos
                                 </button>
                             </div>
 
-                            {/* Dropdown menu */}
+                            {/* Menú desplegable */}
                             {showChannelActions && (
                                 <div className="channel-actions-dropdown">
                                     <button

@@ -1,14 +1,20 @@
 import React,{useMemo, useState} from "react";
 
 const normalize = (s) => (s || "").toString().toLowerCase().trim();
+const normalizeIsbn = (isbn) => (isbn || "").replace(/-/g, "").replace(/\s/g, "").toUpperCase();
 
-export default function MyLibraryPickerModal({ isOpen, onClose, books, onSelect }) {
+export default function MyLibraryPickerModal({ isOpen, onClose, books, onSelect, excludeIsbns = [] }) {
   const [q, setQ] = useState("");
 
+  const excludeSet = useMemo(() => {
+    return new Set((excludeIsbns || []).map(normalizeIsbn).filter(Boolean));
+  }, [excludeIsbns]);
+
   const filtered = useMemo(() => {
+    const list = (books || []).filter((b) => !excludeSet.has(normalizeIsbn(b.isbn)));
     const term = normalize(q);
-    if (!term) return books || [];
-    return (books || []).filter((b) => {
+    if (!term) return list;
+    return list.filter((b) => {
       const title = normalize(b.title);
       const authors =
         Array.isArray(b.authors)
@@ -17,7 +23,7 @@ export default function MyLibraryPickerModal({ isOpen, onClose, books, onSelect 
       const isbn = normalize(b.isbn);
       return title.includes(term) || authors.includes(term) || isbn.includes(term);
     });
-  }, [books, q]);
+  }, [books, q, excludeSet]);
 
   if (!isOpen) return null;
 

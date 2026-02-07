@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
 import AnimatedList from "../components/AnimatedList";
 import CreateEventModal from "../components/CreateEventModal";
@@ -8,56 +8,23 @@ import "./Events.css";
 
 const LIBRARIES = ["places"];
 
+const apiBase = () => {
+  const url = import.meta.env.VITE_BACKEND_URL || "";
+  return url.endsWith("/") ? url.slice(0, -1) : url;
+};
+
 export const Events = () => {
   const { store, dispatch } = useGlobalReducer();
+  const events = store.eventGlobalList || [];
 
   const [selected, setSelected] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [detailsEvent, setDetailsEvent] = useState(null);
+  const [eventsFetched, setEventsFetched] = useState(false);
 
   const mapRef = useRef(null);
-
   const center = useMemo(() => ({ lat: 40.416775, lng: -3.70379 }), []);
-
-  const baseEvents = useMemo(
-    () => [
-      {
-        id: "prado-1",
-        title: "Club de lectura: clásicos en el Prado",
-        place: "Museo del Prado",
-        address: "C. de Ruiz de Alarcón, 23, 28014 Madrid",
-        datetimeISO: "2026-02-05T18:30:00",
-        lat: 40.413782,
-        lng: -3.692127,
-        icon: "📖",
-        created_by_name: "Bookie",
-      },
-      {
-        id: "retiro-1",
-        title: "Lectura al aire libre + intercambio de libros",
-        place: "Parque del Retiro",
-        address: "Plaza de la Independencia, Madrid",
-        datetimeISO: "2026-02-08T11:00:00",
-        lat: 40.41526,
-        lng: -3.68442,
-        icon: "☕",
-        created_by_name: "Bookie",
-      },
-      {
-        id: "matadero-1",
-        title: "Encuentro: novela contemporánea",
-        place: "Matadero Madrid",
-        address: "Pl. de Legazpi, 8, 28045 Madrid",
-        datetimeISO: "2026-02-12T19:00:00",
-        lat: 40.39194,
-        lng: -3.69833,
-        icon: "🎤",
-        created_by_name: "Bookie",
-      },
-    ],
-    []
-  );
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -69,44 +36,36 @@ export const Events = () => {
     region: "ES",
   });
 
-  const loadEvents = () => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("event_global_list") || "[]");
-      if (Array.isArray(saved) && saved.length) return saved;
-    } catch {}
-    if (Array.isArray(store.eventGlobalList) && store.eventGlobalList.length) return store.eventGlobalList;
-    return baseEvents;
-  };
+  useEffect(() => {
+    if (!apiBase() || eventsFetched || events.length > 0) return;
+    let cancelled = false;
+    fetch(`${apiBase()}/api/events`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => {
+        if (cancelled || !Array.isArray(data)) return;
+        const mapped = data.map((e) => {
+          const lat = typeof e.lat === "number" ? e.lat : parseFloat(e.lat);
+          const lng = typeof e.lng === "number" ? e.lng : parseFloat(e.lng);
+          return {
+            ...e,
+            lat: Number.isFinite(lat) ? lat : null,
+            lng: Number.isFinite(lng) ? lng : null,
+            icon: e.category || "📖",
+            datetimeISO: e.date && e.time ? `${e.date}T${e.time}:00` : null,
+            place: e.location || "",
+            address: e.location || "",
+          };
+        });
+        dispatch({ type: "set_events", payload: mapped });
+        setEventsFetched(true);
+      })
+      .catch(() => setEventsFetched(true));
+    return () => { cancelled = true; };
+  }, [events.length, eventsFetched, dispatch]);
 
-  const [events, setEvents] = useState(loadEvents());
-
-  const persistEvents = (list) => {
-    try {
-      localStorage.setItem("event_global_list", JSON.stringify(list));
-      window.dispatchEvent(new Event("local-storage-changed"));
-    } catch {}
-  };
-
-  const upsertEvent = (ev) => {
-    const id =
-      ev?.id ??
-      ev?.event_id ??
-      ev?._id ??
-      `${(ev?.title || "event").slice(0, 20)}-${Date.now()}`;
-
-    const withId = { ...ev, id };
-
-    setEvents((prev) => {
-      const idx = prev.findIndex((x) => (x.id ?? x.event_id ?? x._id) === id);
-      const next = idx === -1 ? [...prev, withId] : prev.map((x, i) => (i === idx ? withId : x));
-      persistEvents(next);
-      return next;
-    });
-
-    return withId;
-  };
-
-  const formatDateTime = (iso) => {
+  const formatDateTime = (ev) => {
+    const iso = ev?.datetimeISO ?? (ev?.date && ev?.time ? `${ev.date}T${ev.time}:00` : null);
+    if (!iso) return { date: ev?.date ?? "", time: ev?.time ?? "" };
     const d = new Date(iso);
     return {
       date: d.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "short" }),
@@ -116,20 +75,56 @@ export const Events = () => {
 
   const focusMap = (ev) => {
     if (!mapRef.current || typeof ev?.lat !== "number" || typeof ev?.lng !== "number") return;
+    // Hacemos pan suave al evento y luego ajustamos el zoom para que el pin sea claramente visible
     mapRef.current.panTo({ lat: ev.lat, lng: ev.lng });
-    mapRef.current.setZoom(15);
+    setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.setZoom(15);
+      }
+    }, 300);
   };
 
   const handleSelect = (ev) => {
-    setSelected(ev);
-    focusMap(ev);
+    if (!ev) {
+      console.warn("handleSelect: evento es null o undefined");
+      return;
+    }
+    
+    
+    // Normalizamos las coordenadas
+    const lat = typeof ev?.lat === "number" ? ev.lat : parseFloat(ev?.lat);
+    const lng = typeof ev?.lng === "number" ? ev.lng : parseFloat(ev?.lng);
+    
+    
+    // Si tiene coordenadas válidas, movemos el mapa y seleccionamos el evento
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      const normalized = { ...ev, lat, lng };
+      setSelected(normalized);
+      // Pequeño delay para asegurar que el mapa esté listo
+      setTimeout(() => {
+        focusMap(normalized);
+      }, 100);
+    } else {
+      // Si no tiene coordenadas, al menos seleccionamos el evento para mostrar detalles
+      // (aunque no podamos mover el mapa)
+      console.warn(`Evento "${ev.title}" no tiene coordenadas válidas (lat: ${ev.lat}, lng: ${ev.lng})`);
+      setSelected(ev);
+    }
   };
 
   const handleAddEvent = (newEvent) => {
-    dispatch({ type: "add_event", payload: newEvent });
-    const inserted = upsertEvent(newEvent);
-    setSelected(inserted);
-    focusMap(inserted);
+    const lat = typeof newEvent.lat === "number" ? newEvent.lat : parseFloat(newEvent.lat);
+    const lng = typeof newEvent.lng === "number" ? newEvent.lng : parseFloat(newEvent.lng);
+    const normalized = {
+      ...newEvent,
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null,
+    };
+    dispatch({ type: "add_event", payload: normalized });
+    if (Number.isFinite(normalized.lat) && Number.isFinite(normalized.lng)) {
+      setSelected(normalized);
+      focusMap(normalized);
+    }
   };
 
   const handleJoin = (ev) => {
@@ -151,39 +146,43 @@ export const Events = () => {
         onClick={() => setSelected(null)}
       >
         {events
-          .filter((ev) => typeof ev.lat === "number" && typeof ev.lng === "number")
-          .map((ev) => (
-            <Marker key={ev.id} position={{ lat: ev.lat, lng: ev.lng }} onClick={() => handleSelect(ev)} />
-          ))}
+          .filter((ev) => ev && Number.isFinite(ev.lat) && Number.isFinite(ev.lng))
+          .map((ev) => {
+            const isSelected = selected?.id === ev.id;
 
-        {selected && (
-          <InfoWindow
-            position={{ lat: selected.lat, lng: selected.lng }}
-            options={{ pixelOffset: new window.google.maps.Size(0, -55) }}
-            onCloseClick={() => setSelected(null)}
-          >
-            <div className="events-infowindow">
-              <div className="events-iw-title">{selected.title}</div>
-              <div className="events-iw-row">{selected.place}</div>
-              <div className="events-iw-row">{formatDateTime(selected.datetimeISO).date}</div>
+            return (
+              <Marker
+                key={ev.id}
+                position={{ lat: ev.lat, lng: ev.lng }}
+                onClick={() => handleSelect(ev)}
+              >
+                {isSelected && (
+                  <InfoWindow onCloseClick={() => setSelected(null)}>
+                    <div className="events-infowindow">
+                      <div className="events-iw-title">{selected.title}</div>
+                      <div className="events-iw-row">{selected.place || selected.location}</div>
+                      <div className="events-iw-row">{formatDateTime(selected).date}</div>
 
-              <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-                <button className="events-join-btn" onClick={() => handleJoin(selected)}>
-                  Apuntarme
-                </button>
-                <button
-                  className="events-join-btn"
-                  onClick={() => {
-                    setDetailsEvent(selected);
-                    setIsDetailsOpen(true);
-                  }}
-                >
-                  View More
-                </button>
-              </div>
-            </div>
-          </InfoWindow>
-        )}
+                      <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                        <button className="events-join-btn" onClick={() => handleJoin(selected)}>
+                          Apuntarme
+                        </button>
+                        <button
+                          className="events-join-btn"
+                          onClick={() => {
+                            setDetailsEvent(selected);
+                            setIsDetailsOpen(true);
+                          }}
+                        >
+                          View More
+                        </button>
+                      </div>
+                    </div>
+                  </InfoWindow>
+                )}
+              </Marker>
+            );
+          })}
       </GoogleMap>
 
       <div className="events-right-overlay">
@@ -191,20 +190,28 @@ export const Events = () => {
           <div className="events-list-box">
             <AnimatedList
               items={events}
-              onItemSelect={(item) => handleSelect(item)}
+              onItemSelect={(item, index) => {
+                handleSelect(item);
+              }}
               showGradients
               enableArrowNavigation
               displayScrollbar
               initialSelectedIndex={-1}
               renderItem={(ev) => {
-                const { date, time } = formatDateTime(ev.datetimeISO);
+                const { date, time } = formatDateTime(ev);
+                const hasCoords = Number.isFinite(ev?.lat) && Number.isFinite(ev?.lng);
                 return (
-                  <div>
+                  <div style={{ cursor: "pointer" }}>
                     <p className="item-text" style={{ fontWeight: 800, marginBottom: 6 }}>
                       {ev.title}
                     </p>
                     <p className="item-text" style={{ opacity: 0.75, marginBottom: 0, fontSize: "0.85rem" }}>
-                      {ev.place} · {date} · {time}
+                      {(ev.place || ev.location || "")} · {date} · {time}
+                      {!hasCoords && (
+                        <span style={{ color: "#ff6b6b", fontSize: "0.75rem", marginLeft: "0.5rem" }}>
+                          (sin ubicación)
+                        </span>
+                      )}
                     </p>
                   </div>
                 );

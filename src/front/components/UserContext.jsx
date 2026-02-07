@@ -1,6 +1,9 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 
 const UserContext = createContext();
+
+/** Misma URL por defecto que el backend (models.User.DEFAULT_AVATAR_URL) para consistencia */
+export const DEFAULT_AVATAR_URL = "https://res.cloudinary.com/dcmqxfpnd/image/upload/v1770140317/i9acwjupwp34xsegrzm6.jpg";
 
 export const useUser = () => {
     const context = useContext(UserContext);
@@ -11,31 +14,56 @@ export const useUser = () => {
 };
 
 export const UserProvider = ({ children }) => {
-    // 1. Avatar (Sincronizado)
-    const [profileImg, setProfileImg] = useState(() => {
-        const savedPic = localStorage.getItem('userAvatar'); // Sin JSON.parse si es solo la URL
-        return savedPic || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80";
-    });
+    const [userData, setUserData] = useState(null);
 
-    // 2. Datos de Usuario (Sincronizado)
-    const [userData, setUserData] = useState(() => {
-        const currentUser = localStorage.getItem('user_data');
-        return currentUser ? JSON.parse(currentUser) : null;
-    });
+    const apiBase = (() => {
+        const url = import.meta.env.VITE_BACKEND_URL || '';
+        return url.endsWith('/') ? url.slice(0, -1) : url;
+    })();
 
-    const updateProfileImg = (newUrl) => {
-        setProfileImg(newUrl);
-        localStorage.setItem('userAvatar', newUrl);
-    };
+    // Al cargar la app, si hay token, obtener usuario desde la API (sin usar localStorage para user_data)
+    useEffect(() => {
+        if (!apiBase) return;
+        const token = localStorage.getItem('access_token');
+        if (!token || userData !== null) return;
+        let cancelled = false;
+        fetch(`${apiBase}/api/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+                if (!cancelled && data && typeof data === 'object') setUserData(data);
+            })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, [apiBase]);
 
-    const updateProfile = (newUser) => {
+    // Avatar: userData.image_avatar si es URL válida; si no, DEFAULT_AVATAR_URL
+    const profileImg = (() => {
+        const url = userData?.image_avatar;
+        if (url && typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://')))
+            return url;
+        return DEFAULT_AVATAR_URL;
+    })();
+
+    const updateProfileImg = useCallback((newUrl) => {
+        setUserData((prev) => {
+            if (!prev) return prev;
+            return { ...prev, image_avatar: newUrl };
+        });
+    }, []);
+
+    const updateProfile = useCallback((newUser) => {
+        if (newUser !== null && (typeof newUser !== 'object' || Array.isArray(newUser))) return;
         setUserData(newUser);
-        // ¡IMPORTANTE!: Usar JSON.stringify para que no se guarde como [object Object]
-        localStorage.setItem('user_data', JSON.stringify(newUser));
-    };
+    }, []);
+
+    const clearUser = useCallback(() => {
+        setUserData(null);
+    }, []);
 
     return (
-        <UserContext.Provider value={{ profileImg, updateProfileImg, userData, updateProfile }}>
+        <UserContext.Provider value={{ profileImg, updateProfileImg, userData, updateProfile, clearUser }}>
             {children}
         </UserContext.Provider>
     );

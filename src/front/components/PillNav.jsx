@@ -4,6 +4,7 @@ import { gsap } from "gsap";
 import "./PillNav.css";
 import { nav } from "framer-motion/client";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "./UserContext";
 
 
 const PillNav = ({
@@ -149,21 +150,17 @@ const PillNav = ({
     activeTweenRefs.current[i] = tl.tweenTo(0, { duration: 0.2, ease, overwrite: "auto" });
   };
 
+  const { clearUser } = useUser();
   const handleLogOut = () => {
     setMenuOpen(false);
     if (onLogout) {
       onLogout();
       return;
     }
+    clearUser();
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user_data");
-    localStorage.removeItem("event_global_list");
-    localStorage.removeItem("selected_book");
-    localStorage.removeItem("stream_token");  
-    localStorage.removeItem("prefile_prefs_32");    
-    localStorage.removeItem("prefile_prefs_59");    
-    
+    localStorage.removeItem("stream_token");
     navigate("/login");
   };
 

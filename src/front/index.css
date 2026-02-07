@@ -9,6 +9,8 @@
   --book-lavender: #b5b0f7;
   --book-wine: #730202;
   --book-bg: #eae8e4;
+  --card-radius: 20px;
+  --main-bg: #e8e8e8;
 }
 
 /* ===== RESET ===== */
@@ -47,7 +49,7 @@ body {
 /* ===== HEADER ===== */
 .top-header {
   height: 70px;
-  background-color: white !important;
+  background-color: white;
   display: flex;
   align-items: center;
   justify-content: space-between;

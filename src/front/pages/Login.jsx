@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom";
 import Toastify from 'toastify-js'
 import 'toastify-js/src/toastify.css'
+import { useUser } from "../components/UserContext";
 import "./Login.css";
 import logo from "../assets/img/Logo.png";
 
 export const Login = () => {
+	const { updateProfile } = useUser();
 
 	const [formData, setFormData] = useState({
 		email: "",
@@ -53,32 +55,43 @@ export const Login = () => {
 			const data = await response.json();
 			localStorage.setItem('access_token', data.access_token);
 			localStorage.setItem('refresh_token', data.refresh_token);
-
-			// Guardar datos del usuario para Stream Chat
-			if (data.user) {
-				localStorage.setItem('user_data', JSON.stringify(data.user));
-			}
-
-			// Guardar Stream token si está disponible
 			if (data.stream_token) {
 				localStorage.setItem('stream_token', data.stream_token);
 			}
+
+			// Cargar usuario actualizado de la BD (image_avatar, username, etc.) para que la foto y datos se vean en la app y en Stream Chat
+			const baseUrl = backendUrl.endsWith("/") ? backendUrl.slice(0, -1) : backendUrl;
+			let userToStore = data.user;
+			if (data.user?.id && data.access_token) {
+				try {
+					const userResp = await fetch(`${baseUrl}/api/users/${data.user.id}`, {
+						headers: { Authorization: `Bearer ${data.access_token}` },
+					});
+					if (userResp.ok) {
+						const freshUser = await userResp.json();
+						if (freshUser && typeof freshUser === "object") userToStore = freshUser;
+					}
+				} catch (_) {}
+			}
+			if (userToStore) {
+				updateProfile(userToStore);
+			}
+
 			Toastify({
 				text: "Login successful",
 				duration: 3000,
 				destination: "https://github.com/apvarun/toastify-js",
 				newWindow: true,
 				close: true,
-				gravity: "top", // `top` or `bottom`
-				position: "right", // `left`, `center` or `right`
-				stopOnFocus: true, // Prevents dismissing of toast on hover
-				style: {
-					background: "rgb(132, 84, 200)",
-				},
-				onClick: function () { } // Callback after click
+				gravity: "top",
+				position: "right",
+				stopOnFocus: true,
+				style: { background: "rgb(132, 84, 200)" },
+				onClick: function () { }
 			}).showToast();
 			setLoading(false);
-			navigate("/home");
+			// Navegar en el siguiente tick para que el estado del contexto se actualice antes de montar Home
+			setTimeout(() => navigate("/home"), 0);
 		} catch (error) {
 			console.error("Login error:", error);
 			setError("Failed to login. Please check your credentials.");
@@ -93,7 +106,7 @@ export const Login = () => {
 			{
 				loading
 					? (
-						<img src="src\front\assets\Books stack.gif" alt="Loading Books..." />
+						<img src="public/Books_stack.gif" alt="Loading Books..." />
 					)
 					: (
 						<>

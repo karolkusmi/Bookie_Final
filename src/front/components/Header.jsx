@@ -1,20 +1,23 @@
-import { useUser } from "./UserContext";
+import { useUser, DEFAULT_AVATAR_URL } from "./UserContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import PillNav from "./PillNav";
 import LogoImg from "../assets/img/Logo.png";
 
 export const Header = () => {
-    const { profileImg, userData } = useUser();
+    const { profileImg, userData, clearUser } = useUser();
     const location = useLocation();
     const navigate = useNavigate();
 
-    const saved = JSON.parse(localStorage.getItem("user_data") || "null");
-    const username = userData?.username || saved?.username || saved?.email || "User";
+    const username = userData?.username || userData?.email || "User";
+    const safeAvatar = profileImg || userData?.image_avatar || DEFAULT_AVATAR_URL;
 
-    const safeAvatar =
-        profileImg ||
-        localStorage.getItem("userAvatar") ||
-        "https://i.pravatar.cc/150?img=3";
+    const handleLogout = () => {
+        clearUser();
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        localStorage.removeItem("stream_token");
+        navigate("/login");
+    };
 
     const items = [
         { href: "/home", label: "Home" },
@@ -43,6 +46,7 @@ export const Header = () => {
                     pillColor="#ffffff"
                     hoveredPillTextColor="#231B59"
                     onLogoClick={() => navigate("/profile")}
+                    onLogout={handleLogout}
                 />
             </div>
         </header>

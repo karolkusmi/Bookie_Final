@@ -1,40 +1,51 @@
-/* Contenedor específico para no afectar otras páginas */
-.signin-wrapper {
-  background-color: #f4f1ee; /* Fondo crema claro */
+/* Contenedor similar al de Login */
+.signin-page {
+  background-color: #f4f1ee;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* centrado vertical para que logo no se corte */
+  align-items: center;
+  gap: 0.25rem;
+  padding-top: 0.5rem;  /* poco espacio arriba */
+  padding-bottom: 0.5rem; /* poco espacio abajo */
 }
 
-/* --- AJUSTE PARA EL LOGO TRANSPARENTE --- */
-.signin-wrapper .text-center.mb-4 img {
-  width: 180px !important;
+/* Logo, algo más pequeño para reducir altura total */
+.signin-page .signin-logo {
+  width: 130px;
   height: auto;
   mix-blend-mode: multiply;
-  filter: contrast(110%); /* Opcional: da más fuerza al logo */
+  filter: contrast(110%);
 }
 
-/* Tarjeta principal */
-.signin-wrapper .card {
+/* Sin espacio extra entre logo y formulario */
+.signin-page .text-center.mb-4 {
+  margin-bottom: 0 !important;
+}
+
+/* Card principal, compacta para que quepa todo sin scroll en pantallas medias */
+.signin-page .card {
   border: none !important;
   border-radius: 25px !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
-  width: 380px !important;
-  max-width: 90% !important;
-  padding: 1.2rem !important;
+  padding: 1.4rem 1.2rem !important;
+  width: 360px !important;
+  max-width: 90%;
   background-color: #ffffff;
-  margin-top: -8px !important; /* sube la card hacia el logo */
 }
 
-/* Título Sign In */
-.signin-wrapper h1 {
-  color: #3b368c !important; /* Morado oscuro */
+/* Título Sign Up */
+.signin-page h1 {
+  color: #3b368c !important;
   font-weight: 800 !important;
-  font-size: 2.5rem !important;
-  margin-bottom: 1.5rem !important;
+  font-size: 1.8rem !important;
+  margin-bottom: 0.8rem !important;
   letter-spacing: -1px;
 }
 
-/* Labels del Signin con el mismo estilo que Login */
-.signin-wrapper .form-label {
+/* Labels */
+.signin-page .form-label {
   color: #5d5a9d !important;
   font-weight: 600 !important;
   margin-bottom: 6px !important;
@@ -42,59 +53,59 @@
 }
 
 /* Campos de texto */
-.signin-wrapper .form-control {
+.signin-page .form-control {
   background-color: #fcfcfc !important;
   border: 1.5px solid #e8e8e8 !important;
   border-radius: 12px !important;
-  padding: 14px 15px !important;
+  padding: 10px 12px !important;
   color: #3b368c !important;
   margin-bottom: 10px;
 }
 
-.signin-wrapper .form-control:focus {
+.signin-page .form-control:focus {
   border-color: #7d73d1 !important;
   box-shadow: 0 0 0 0.2rem rgba(125, 115, 209, 0.1) !important;
 }
 
 /* Checkboxes */
-.signin-wrapper .form-check-label {
+.signin-page .form-check-label {
   color: #5d5a9d !important;
   font-size: 0.9rem;
   cursor: pointer;
 }
 
-.signin-wrapper .form-check-input {
+.signin-page .form-check-input {
   border-color: #7d73d1 !important;
   cursor: pointer;
 }
 
-.signin-wrapper .form-check-input:checked {
+.signin-page .form-check-input:checked {
   background-color: #7d73d1 !important;
   border-color: #7d73d1 !important;
 }
 
-/* Botón Sign Up */
-.signin-wrapper .btn-primary {
+/* Botones */
+.signin-page .btn-primary {
   background-color: #7d73d1 !important;
   border: none !important;
   border-radius: 15px !important;
-  padding: 14px !important;
+  padding: 8px !important;
   font-weight: bold !important;
   text-transform: uppercase;
   letter-spacing: 1px;
-  font-size: 1rem;
+  font-size: 0.9rem;
   transition: all 0.3s ease;
-  margin-top: 10px;
+  margin-top: 6px;
 }
 
-.signin-wrapper .btn-primary:hover {
+.signin-page .btn-primary:hover {
   background-color: #6a60bd !important;
   transform: translateY(-1px);
   box-shadow: 0 5px 15px rgba(125, 115, 209, 0.3) !important;
 }
 
 /* Alerta de error */
-.signin-wrapper .alert-danger {
+.signin-page .alert-danger {
   border-radius: 12px;
   font-size: 0.85rem;
   padding: 12px;
@@ -103,16 +114,23 @@
   color: #d9534f;
 }
 
-@keyframes flotar {
-  0%,
-  100% {
-    transform: translateY(0);
+/* Ajustes extra para pantallas con poca altura (portátiles pequeños) */
+@media (max-height: 700px) {
+  .signin-page .signin-logo {
+    width: 110px;
   }
-  50% {
-    transform: translateY(-15px);
-  }
-}
 
-.logo-signin {
-  animation: flotar 3s ease-in-out infinite;
+  .signin-page .card {
+    padding: 1.4rem 1.2rem !important;
+  }
+
+  .signin-page h1 {
+    font-size: 1.6rem !important;
+    margin-bottom: 0.6rem !important;
+  }
+
+  .signin-page .btn-primary {
+    padding: 8px !important;
+    font-size: 0.9rem;
+  }
 }
