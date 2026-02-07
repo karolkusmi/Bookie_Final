@@ -43,7 +43,8 @@ const Cloudinary = () => {
             />
 
             {loading ? (
-                <img src="public/Books_stack.gif" alt="Logo" />
+                <img src="https://res.cloudinary.com/dcmqxfpnd/image/upload/v1770485934/Books_stack_xzt4c8.gif
+                " alt="Logo" />
             ) : (
                 <img src={image} alt="imagen subida" />
             )}
