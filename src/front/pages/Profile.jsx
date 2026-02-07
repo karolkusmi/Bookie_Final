@@ -361,7 +361,7 @@ export const Profile = () => {
                   className="btn-wine rounded-pill px-4 py-2"
                   onClick={openCloudinaryWidget}
                 >
-                  <PencilIcon style={{ width: 18 }} /> Cambiar foto
+                  <PencilIcon style={{ width: 18 }} /> Change photo
                 </button>
                 <button
                   type="button"
@@ -369,7 +369,7 @@ export const Profile = () => {
                   onClick={saveProfileToBackend}
                   disabled={saving}
                 >
-                  {saving ? "Guardando…" : "Guardar cambios"}
+                  {saving ? "Guardando…" : "Save changes"}
                 </button>
               </div>
               {saveError && <p className="text-danger small mt-2 mb-0">{saveError}</p>}
