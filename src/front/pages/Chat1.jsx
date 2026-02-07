@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Chat from "../components/Chat/Chat";
+import useGlobalReducer from "../hooks/useGlobalReducer";
 import "./Chat1.css";
 import portadaLibro from "../assets/img/portada_Libro.png";
 import Toastify from 'toastify-js';
 import 'toastify-js/src/toastify.css';
 
-// Helper function to show error toast
+// Función auxiliar para mostrar un toast de error
 const showErrorToast = (message) => {
     Toastify({
         text: message,
@@ -27,6 +28,7 @@ const showErrorToast = (message) => {
 export const Chat1 = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const { store } = useGlobalReducer();
 
     const [activeChannelId, setActiveChannelId] = useState(null);
     const [bookTitle, setBookTitle] = useState("");
@@ -34,23 +36,10 @@ export const Chat1 = () => {
     const [bookThumbnail, setBookThumbnail] = useState(null);
     const [activeReaders, setActiveReaders] = useState([]);
 
-    // Check authentication on mount
     useEffect(() => {
         const checkAuth = () => {
-            const streamToken = localStorage.getItem("stream_token");
-            const userData = localStorage.getItem("user_data");
             const accessToken = localStorage.getItem("access_token");
-
-            // Debug: log auth state
-            console.log("Chat1 Auth Check:", {
-                hasAccessToken: !!accessToken,
-                hasStreamToken: !!streamToken,
-                hasUserData: !!userData
-            });
-
-            // Check if user is authenticated
             if (!accessToken) {
-                console.log("No access token, redirecting to login");
                 navigate("/");
                 return false;
             }
@@ -67,6 +56,9 @@ export const Chat1 = () => {
 
         if (channelFromUrl) {
             setActiveChannelId(channelFromUrl);
+            if (channelFromUrl.startsWith("book-isbn-") && !isbnFromUrl) {
+                setBookIsbn(channelFromUrl.replace("book-isbn-", ""));
+            }
         }
         if (bookFromUrl) {
             setBookTitle(decodeURIComponent(bookFromUrl));
@@ -76,18 +68,32 @@ export const Chat1 = () => {
             setBookIsbn(decodeURIComponent(isbnFromUrl));
         }
 
-        try {
-            const savedBook = localStorage.getItem("selected_book");
-            if (savedBook) {
-                const bookData = JSON.parse(savedBook);
-                if (bookData.thumbnail) {
-                    setBookThumbnail(bookData.thumbnail);
-                }
-            }
-        } catch (e) {
-            console.error("Error loading book thumbnail:", e);
+        if (store?.selectedBook?.thumbnail) {
+            setBookThumbnail(store.selectedBook.thumbnail);
         }
-    }, [navigate, searchParams]);
+    }, [navigate, searchParams, store?.selectedBook?.thumbnail]);
+
+    // Tras refrescar, el store está vacío: recuperar portada (y título si falta) por ISBN desde la API
+    useEffect(() => {
+        const isbn = searchParams.get("isbn");
+        const channel = searchParams.get("channel");
+        const isbnToFetch = isbn ? decodeURIComponent(isbn) : (channel && channel.startsWith("book-isbn-") ? channel.replace("book-isbn-", "") : null);
+        if (!isbnToFetch || bookThumbnail) return;
+
+        const backendUrl = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
+        if (!backendUrl) return;
+
+        let cancelled = false;
+        fetch(`${backendUrl}/api/books/by-isbn?isbn=${encodeURIComponent(isbnToFetch)}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+                if (cancelled || !data) return;
+                if (data.thumbnail) setBookThumbnail(data.thumbnail);
+                if (data.title && !searchParams.get("book")) setBookTitle(data.title);
+            })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, [searchParams.get("isbn"), searchParams.get("channel"), searchParams.get("book"), bookThumbnail]);
 
     useEffect(() => {
         if (!activeChannelId) setActiveReaders([]);
@@ -108,7 +114,7 @@ export const Chat1 = () => {
 
     return (
         <div className="page-layout">
-            {/* Barra Lateral Izquierda */}
+            {/* Barra lateral izquierda */}
             <aside className="sidebar">
                 {bookTitle && (
                     <div className="book-section">
@@ -136,7 +142,7 @@ export const Chat1 = () => {
                 )}
 
                 <div className="readers-section">
-                    <h4>Active readers in the chat</h4>
+                    <h4>Lectores activos en el chat</h4>
                     <div className="avatar-group">
                         {activeReaders.length > 0 ? (
                             activeReaders.slice(0, 8).map((user) => (
@@ -152,18 +158,18 @@ export const Chat1 = () => {
                                 />
                             ))
                         ) : (
-                            <span className="text-muted small">No one connected yet</span>
+                            <span className="text-muted small">Todavía no hay nadie conectado</span>
                         )}
                     </div>
                     <p className="readers-count">
-                        {activeReaders.length === 0 && "Select a book and open the chat to see who's here"}
-                        {activeReaders.length === 1 && "1 reader connected"}
-                        {activeReaders.length > 1 && `${activeReaders.length} readers connected`}
+                        {activeReaders.length === 0 && "Selecciona un libro y abre el chat para ver quién está aquí"}
+                        {activeReaders.length === 1 && "1 lector conectado"}
+                        {activeReaders.length > 1 && `${activeReaders.length} lectores conectados`}
                     </p>
                 </div>
             </aside>
 
-            {/* Componente Chat Principal */}
+            {/* Componente principal de Chat */}
             <main className="chat-main">
                 <Chat
                     channelId={activeChannelId}

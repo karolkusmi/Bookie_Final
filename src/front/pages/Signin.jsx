@@ -1,9 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useUser } from "../components/UserContext";
 import "./Signin.css";
 import logo from "../assets/img/Logo.png";
+import defaultAvatar from "../assets/img/imagenperfil.jpg";
 
 export const Signin = () => {
+  const { updateProfileImg, updateProfile } = useUser();
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -29,12 +32,12 @@ export const Signin = () => {
     e.preventDefault();
 
     if (!formData.username || !formData.email || !formData.password) {
-      setError("Por favor completa todos los campos.");
+      setError("Please fill in all the fields.");
       return;
     }
 
     if (!formData.accepted_term) {
-      setError("Debes aceptar los términos.");
+      setError("You must accept the terms.");
       return;
     }
 
@@ -42,7 +45,7 @@ export const Signin = () => {
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
       if (!backendUrl) {
-        setError("VITE_BACKEND_URL no está configurado.");
+        setError("VITE_BACKEND_URL is not configured.");
         return;
       }
 
@@ -59,10 +62,12 @@ export const Signin = () => {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || "Error del servidor");
+        throw new Error(data.message || "Server error");
       }
 
-      await response.json();
+      const user = await response.json();
+      updateProfile(user);
+      updateProfileImg(defaultAvatar);
       navigate("/home");
 
     } catch (err) {
@@ -73,12 +78,12 @@ export const Signin = () => {
   };
 
   return (
-    <div className="signin-wrapper d-flex flex-column justify-content-center align-items-center">
+    <div className="signin-page d-flex justify-content-center align-items-center vh-100">
       <div className="text-center mb-4">
-        <img src={logo} alt="Logo" style={{ width: "180px" }} />
+        <img src={logo} alt="Logo" className="signin-logo" />
       </div>
 
-      <div className="card p-4" style={{ width: "400px" }}>
+      <div className="card p-4">
         <form onSubmit={handleSubmit}>
           <h1 className="text-center">Sign Up</h1>
 
@@ -127,7 +132,7 @@ export const Signin = () => {
               onChange={handleChange}
             />
             <label className="form-check-label">
-              Acepto los términos
+              I accept the terms
             </label>
           </div>
 
@@ -140,7 +145,7 @@ export const Signin = () => {
               onChange={handleChange}
             />
             <label className="form-check-label">
-              Suscribirme al newsletter
+              Subscribe to the newsletter
             </label>
           </div>
 
@@ -151,7 +156,15 @@ export const Signin = () => {
             className="btn btn-primary w-100"
             disabled={loading}
           >
-            {loading ? "Registrando..." : "Registrarse"}
+            {loading ? "Signing up..." : "Sign up"}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-primary w-100 mt-2"
+            onClick={() => navigate("/login")}
+          >
+            I already have an account, go to Login
           </button>
         </form>
       </div>

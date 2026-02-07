@@ -1,10 +1,15 @@
 import React, { useRef, useState } from "react";
 import { Autocomplete } from "@react-google-maps/api";
+import { useUser } from "./UserContext";
 import "./CreateEventsModal.css";
 
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
+const API_BASE = (() => {
+  const url = import.meta.env.VITE_BACKEND_URL || "";
+  return url.endsWith("/") ? url.slice(0, -1) : url;
+})();
 
 const CreateEventModal = ({ isOpen, onClose, onSave }) => {
+  const { userData } = useUser();
   const [name, setName] = useState("");
   const [type, setType] = useState("📖");
   const [locationText, setLocationText] = useState("");
@@ -22,19 +27,18 @@ const CreateEventModal = ({ isOpen, onClose, onSave }) => {
 
   if (!isOpen) return null;
 
-  const getCreatorName = () => {
-    try {
-      const user = JSON.parse(localStorage.getItem("user_data") || "null");
-      return user?.username || user?.email || user?.id || "Unknown";
-    } catch {
-      return "Unknown";
-    }
-  };
+  const getCreatorName = () => userData?.username || userData?.email || String(userData?.id || "") || "Unknown";
 
   const buildEventForUI = (apiEvent, createdByName) => {
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10);
     const datetimeISO = time ? `${dateStr}T${time}:00` : null;
+
+    // Normalizamos lat/lng: primero del backend (apiEvent), luego de coords locales, luego null
+    const latBackend = typeof apiEvent?.lat === "number" ? apiEvent.lat : parseFloat(apiEvent?.lat);
+    const lngBackend = typeof apiEvent?.lng === "number" ? apiEvent.lng : parseFloat(apiEvent?.lng);
+    const lat = Number.isFinite(latBackend) ? latBackend : (coords?.lat ?? null);
+    const lng = Number.isFinite(lngBackend) ? lngBackend : (coords?.lng ?? null);
 
     return {
       ...apiEvent,
@@ -46,8 +50,8 @@ const CreateEventModal = ({ isOpen, onClose, onSave }) => {
       place: placeName || locationText || apiEvent?.location || "",
       address: address || locationText || apiEvent?.location || "",
       place_id: placeId || null,
-      lat: coords?.lat ?? null,
-      lng: coords?.lng ?? null,
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null,
       datetimeISO,
       created_by_name: apiEvent?.created_by_name ?? createdByName,
     };
@@ -92,12 +96,23 @@ const CreateEventModal = ({ isOpen, onClose, onSave }) => {
     setError("");
 
     if (!API_BASE) {
-      setError("No está configurado VITE_BACKEND_URL.");
+      setError("VITE_BACKEND_URL is not configured.");
       return;
     }
 
     if (!name || !type || !locationText || !time) {
-      setError("Completa todos los campos.");
+      setError("Please fill in all fields.");
+      return;
+    }
+
+    // Si tenemos Google Places disponible, obligamos a que el usuario elija una ubicación
+    // del autocompletado para poder obtener coordenadas y que el evento se vea en el mapa.
+    const hasPlaces = Boolean(window.google?.maps?.places);
+    const hasValidCoords = coords && typeof coords.lat === "number" && typeof coords.lng === "number" && 
+                          Number.isFinite(coords.lat) && Number.isFinite(coords.lng);
+    
+    if (hasPlaces && !hasValidCoords) {
+      setError("⚠️ Please select a location from the dropdown list to add it to the map. Just typing is not enough - you must click on one of the suggestions.");
       return;
     }
 
@@ -107,19 +122,25 @@ const CreateEventModal = ({ isOpen, onClose, onSave }) => {
     const dateStr = today.toISOString().slice(0, 10);
     const createdByName = getCreatorName();
 
+    // Aseguramos que lat/lng sean números válidos o null
+    const latValue = hasValidCoords ? coords.lat : null;
+    const lngValue = hasValidCoords ? coords.lng : null;
+
     const payload = {
       title: name,
       date: dateStr,
       time,
       category: type,
       location: locationText,
-      place_id: placeId,
-      place_name: placeName,
-      address,
-      lat: coords?.lat,
-      lng: coords?.lng,
+      place_id: placeId || null,
+      place_name: placeName || null,
+      address: address || locationText || null,
+      lat: latValue,
+      lng: lngValue,
       created_by_name: createdByName,
     };
+
+    console.log("Creating event with payload:", payload);
 
     try {
       const resp = await fetch(`${API_BASE}/api/events`, {
@@ -128,14 +149,34 @@ const CreateEventModal = ({ isOpen, onClose, onSave }) => {
         body: JSON.stringify(payload),
       });
 
-      const data = await resp.json().catch(() => ({}));
+      let data = {};
+      try {
+        const text = await resp.text();
+        data = text ? JSON.parse(text) : {};
+      } catch (e) {
+        console.error("Error parsing response:", e);
+        data = {};
+      }
 
       if (!resp.ok) {
-        setError(data?.msg || data?.message || "Error creating event");
+        const errorMsg = data?.msg || data?.message || data?.error || `Error creating event (${resp.status})`;
+        console.error("Error creating event:", errorMsg, data);
+        setError(errorMsg);
+        setSaving(false);
         return;
       }
 
-      onSave(buildEventForUI(data, createdByName));
+      console.log("Event created successfully:", data);
+      
+      // Construimos el evento con las coordenadas que enviamos (no solo las del backend)
+      const eventForUI = buildEventForUI(
+        { ...data, lat: latValue, lng: lngValue }, 
+        createdByName
+      );
+      
+      console.log("Event for UI:", eventForUI);
+      
+      onSave(eventForUI);
       onClose();
 
       setName("");
@@ -191,17 +232,35 @@ const CreateEventModal = ({ isOpen, onClose, onSave }) => {
 
           <div className="form-row">
             <div className="form-group">
-              <label>Where</label>
+              <label>
+                Where {coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng) && (
+                  <span style={{ color: "#28a745", fontSize: "0.85rem", marginLeft: "0.5rem" }}>
+                    ✓ Location selected
+                  </span>
+                )}
+              </label>
 
               {canUsePlaces ? (
-                <Autocomplete onLoad={onLoadAutocomplete} onPlaceChanged={onPlaceChanged}>
+                <Autocomplete 
+                  onLoad={onLoadAutocomplete} 
+                  onPlaceChanged={onPlaceChanged}
+                  options={{
+                    types: ['establishment', 'geocode'],
+                    componentRestrictions: { country: 'es' }
+                  }}
+                >
                   <input
                     type="text"
                     value={locationText}
                     onChange={(e) => handleLocationChange(e.target.value)}
-                    placeholder="Busca una ubicación…"
+                    placeholder="Search and select a location from the list..."
                     required
                     disabled={saving}
+                    style={{
+                      borderColor: coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng) 
+                        ? "#28a745" 
+                        : undefined
+                    }}
                   />
                 </Autocomplete>
               ) : (
@@ -209,10 +268,15 @@ const CreateEventModal = ({ isOpen, onClose, onSave }) => {
                   type="text"
                   value={locationText}
                   onChange={(e) => handleLocationChange(e.target.value)}
-                  placeholder="Busca una ubicación…"
+                  placeholder="Enter location (coordinates won't be saved)"
                   required
                   disabled={saving}
                 />
+              )}
+              {canUsePlaces && !coords && locationText && (
+                <small style={{ color: "#ffc107", display: "block", marginTop: "0.25rem" }}>
+                  ⚠️ Select a location from the dropdown to add it to the map
+                </small>
               )}
             </div>
 

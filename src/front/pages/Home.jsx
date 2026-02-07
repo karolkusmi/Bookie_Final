@@ -8,9 +8,11 @@ import portadaLibro from "../assets/img/portada_Libro.png";
 import useGlobalReducer from "../hooks/useGlobalReducer";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../components/UserContext";
+import { useJsApiLoader } from "@react-google-maps/api";
 
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 const normalizeIsbn = (isbn) => (isbn || "").replaceAll("-", "").replaceAll(" ", "").toUpperCase();
+const MAP_LIBRARIES = ["places"];
 
 export const Home = () => {
   const { store, dispatch } = useGlobalReducer();
@@ -23,6 +25,20 @@ export const Home = () => {
 
   const navigate = useNavigate();
   const { userData } = useUser();
+
+  // Cargamos la librería de Google Places aunque en Home no haya mapa,
+  // para que el Autocomplete de CreateEventModal pueda obtener coordenadas
+  // y así los eventos se muestren correctamente en el mapa de la página Events.
+  // IMPORTANTE: Usamos el mismo 'id' que en Events.jsx para evitar conflictos
+  // cuando React Router navega entre páginas (evita "Loader must not be called again").
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  useJsApiLoader({
+    id: "google-maps-script",
+    googleMapsApiKey: apiKey || "",
+    libraries: MAP_LIBRARIES,
+    language: "es",
+    region: "ES",
+  });
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL
     ? (import.meta.env.VITE_BACKEND_URL.endsWith("/")
@@ -72,10 +88,11 @@ export const Home = () => {
     return sorted;
   }, [store.eventGlobalList]);
 
-  const upcomingEvents = useMemo(() => {
-    const now = new Date();
-    return nextEventsSorted.filter((ev) => ev._sortDate >= now);
-  }, [nextEventsSorted]);
+  // Antes filtrábamos solo los eventos futuros (_sortDate >= ahora),
+  // lo que hacía que eventos pasados (incluso del mismo día) desaparecieran de Home
+  // mientras seguían viéndose en la página Events. Para que Home refleje SIEMPRE
+  // lo que hay en la base de datos (como quieres), usamos todos los eventos ordenados.
+  const upcomingEvents = useMemo(() => nextEventsSorted, [nextEventsSorted]);
 
   const visibleEvents = isExpandedEvents
     ? nextEventsSorted
@@ -94,47 +111,11 @@ export const Home = () => {
   const spotlightRadius = 730;
   const glowColor = "132, 0, 255";
 
-  const getUserId = () => {
-    const fromCtx = userData?.id;
-    if (fromCtx) return fromCtx;
-    const raw = localStorage.getItem("user_data");
-    if (!raw || raw === "undefined" || raw === "null") return null;
-    try {
-      const saved = JSON.parse(raw);
-      return saved?.id ?? null;
-    } catch {
-      return null;
-    }
-  };
-
-  const getPrefsKey = () => {
-    const uid = getUserId();
-    return uid ? `profile_prefs_${uid}` : null;
-  };
+  const getUserId = () => userData?.id ?? null;
 
 
 
 
-
-
-
-  const loadPrefs = () => {
-    const key = getPrefsKey();
-    if (!key) return null;
-    try {
-      return JSON.parse(localStorage.getItem(key) || "null");
-    } catch {
-      return null;
-    }
-  };
-
-  const savePrefs = (next) => {
-    const key = getPrefsKey();
-    if (!key) return;
-    try {
-      localStorage.setItem(key, JSON.stringify(next));
-    } catch {}
-  };
 
   const getAuthorsArray = (book) => {
     if (!book) return [];
@@ -162,6 +143,38 @@ export const Home = () => {
     }
   };
 
+  const fetchTop3FromBackend = async () => {
+    const userId = getUserId();
+    if (!userId || !backendUrl) return;
+    try {
+      const resp = await fetch(`${backendUrl}/api/users/${userId}/top3`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const list = Array.isArray(data?.top3) ? data.top3 : [];
+      setTop3([list[0] ?? null, list[1] ?? null, list[2] ?? null]);
+    } catch {
+      // Mantener estado actual si falla la red
+    }
+  };
+
+  const saveTop3ToBackend = async (top3Array) => {
+    const userId = getUserId();
+    if (!userId || !backendUrl) return;
+    try {
+      const resp = await fetch(`${backendUrl}/api/users/${userId}/top3`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ top3: top3Array }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        setUiMessage({ type: "warning", text: err?.msg || err?.message || "Could not save Top 3 to the server." });
+      }
+    } catch (e) {
+      setUiMessage({ type: "warning", text: "Could not save Top 3 (network error)." });
+    }
+  };
+
   const pickTop3Book = (item) => {
     if (activeSlot === null) return;
     const mapped = {
@@ -172,25 +185,19 @@ export const Home = () => {
       thumbnail: item.thumbnail || null,
       isbn: normalizeIsbn(item.isbn),
     };
-    const prefs = loadPrefs() || {};
-    setTop3((prev) => {
-      const next = [...prev];
-      next[activeSlot] = mapped;
-      savePrefs({ ...prefs, top3: next });
-      return next;
-    });
+    const next = [...top3];
+    next[activeSlot] = mapped;
+    setTop3(next);
+    saveTop3ToBackend(next);
     setActiveSlot(null);
     setIsBookModalOpen(false);
   };
 
   const clearTop3Slot = (idx) => {
-    const prefs = loadPrefs() || {};
-    setTop3((prev) => {
-      const next = [...prev];
-      next[idx] = null;
-      savePrefs({ ...prefs, top3: next });
-      return next;
-    });
+    const next = [...top3];
+    next[idx] = null;
+    setTop3(next);
+    saveTop3ToBackend(next);
   };
 
   const handleBookSelect = (book) => {
@@ -345,27 +352,44 @@ export const Home = () => {
   }, [enableTilt, clickEffect]);
 
   useEffect(() => {
-    const syncBook = () => {
-      const saved = localStorage.getItem("selected_book");
-      if (!saved) {
-        setSelectedBook(null);
-      } else {
-        setSelectedBook(JSON.parse(saved));
+    const syncBookFromBackend = async () => {
+      const userId = getUserId();
+      if (!userId || !backendUrl) return;
+
+      try {
+        const resp = await fetch(`${backendUrl}/api/users/${userId}/current-reading`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (data?.current) {
+          const b = data.current;
+          const mapped = {
+            id: b.isbn,
+            title: b.title,
+            authors: Array.isArray(b.authors) ? b.authors : [],
+            publisher: b.publisher || null,
+            thumbnail: b.thumbnail || null,
+            isbn: normalizeIsbn(b.isbn),
+          };
+          setSelectedBook(mapped);
+          dispatch({ type: "set_selected_book", payload: mapped });
+        } else {
+          setSelectedBook(null);
+          dispatch({ type: "set_selected_book", payload: null });
+        }
+      } catch {
+        // Si falla, dejamos el estado local como está
       }
     };
-    window.addEventListener("local-storage-changed", syncBook);
-    return () => window.removeEventListener("local-storage-changed", syncBook);
-  }, []);
+
+    syncBookFromBackend();
+  }, [backendUrl]);
 
   useEffect(() => {
     const uid = getUserId();
     if (!uid) return;
     fetchLibrary();
-    const prefs = loadPrefs();
-    if (prefs && Array.isArray(prefs.top3)) {
-      setTop3([prefs.top3[0] || null, prefs.top3[1] || null, prefs.top3[2] || null]);
-    }
-  }, [userData?.id]);
+    if (backendUrl) fetchTop3FromBackend();
+  }, [userData?.id, backendUrl]);
 
   // Sin backend no hacemos fetch; marcar como cargado para no bloquear la UI (skeletons infinitos)
   useEffect(() => {
@@ -423,7 +447,15 @@ export const Home = () => {
   }, [selectedBook?.isbn, backendUrl]);
 
   const handleAddEvent = (newEvent) => {
-    dispatch({ type: "add_event", payload: newEvent });
+    // Normalizamos las coordenadas antes de añadir al store para asegurar que el mapa pueda mostrarlas
+    const lat = typeof newEvent.lat === "number" ? newEvent.lat : parseFloat(newEvent.lat);
+    const lng = typeof newEvent.lng === "number" ? newEvent.lng : parseFloat(newEvent.lng);
+    const normalized = {
+      ...newEvent,
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null,
+    };
+    dispatch({ type: "add_event", payload: normalized });
   };
 
   const makeChannelIdFromIsbn = (isbn) => {
@@ -433,7 +465,7 @@ export const Home = () => {
   };
 
   // ✅ IMPORTANTE: mapeo + normalize (para no romper prologue / ISBN)
-  const handleSelectBook = (book) => {
+  const handleSelectBook = async (book) => {
     const mapped = {
       id: book.id,
       title: book.title,
@@ -444,10 +476,51 @@ export const Home = () => {
     };
 
     setSelectedBook(mapped);
-    localStorage.setItem("selected_book", JSON.stringify(mapped));
+    dispatch({ type: "set_selected_book", payload: mapped });
     setUiMessage(null);
-
     window.dispatchEvent(new Event("local-storage-changed"));
+
+    // Persistimos también en el backend como \"current reading\" para este usuario
+    const userId = getUserId();
+    if (!userId || !backendUrl) return;
+
+    try {
+      const resp = await fetch(`${backendUrl}/api/users/${userId}/current-reading`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          isbn: mapped.isbn,
+          title: mapped.title,
+          authors: mapped.authors,
+          publisher: mapped.publisher,
+          thumbnail: mapped.thumbnail,
+        }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        console.error("Error setting current reading:", err);
+        return;
+      }
+
+      const data = await resp.json();
+      if (data?.current) {
+        // Alineamos el estado con lo que devuelve el backend (por si normaliza autores, etc.)
+        const mappedFromApi = {
+          id: data.current.isbn,
+          title: data.current.title,
+          authors: Array.isArray(data.current.authors) ? data.current.authors : [],
+          publisher: data.current.publisher || null,
+          thumbnail: data.current.thumbnail || null,
+          isbn: normalizeIsbn(data.current.isbn),
+        };
+        setSelectedBook(mappedFromApi);
+        dispatch({ type: "set_selected_book", payload: mappedFromApi });
+        window.dispatchEvent(new Event("local-storage-changed"));
+      }
+    } catch (e) {
+      console.error("Network error setting current reading:", e);
+    }
   };
 
   const handleGoToAIChat = (book) => {
@@ -569,6 +642,37 @@ export const Home = () => {
       setSelectedEvent(null);
       setIsEventDetailsOpen(false);
       setUiMessage({ type: "success", text: "Event deleted successfully." });
+    } catch (e) {
+      setUiMessage({ type: "danger", text: e.message });
+    }
+  };
+
+  const handleClearCurrentReading = async () => {
+    const userId = getUserId();
+    if (!userId) {
+      setUiMessage({ type: "danger", text: "No active user. Please log in again." });
+      return;
+    }
+    if (!backendUrl) {
+      setUiMessage({ type: "danger", text: "Backend URL is not configured." });
+      return;
+    }
+
+    try {
+      const resp = await fetch(`${backendUrl}/api/users/${userId}/current-reading`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err?.msg || err?.message || "Could not clear current reading.");
+      }
+
+      setSelectedBook(null);
+      dispatch({ type: "set_selected_book", payload: null });
+      setUiMessage({ type: "success", text: "Current reading cleared." });
+      window.dispatchEvent(new Event("local-storage-changed"));
     } catch (e) {
       setUiMessage({ type: "danger", text: e.message });
     }
@@ -713,9 +817,21 @@ export const Home = () => {
                         {activeReaders.length > 1 && `${activeReaders.length} readers in this conversation.`}
                       </p>
 
-                      <button className="btn btn-wine w-100 py-2 rounded-3" onClick={handleOpenChat} disabled={chatLoading}>
-                        {chatLoading ? "Opening..." : "Open Chat"}
-                      </button>
+                      <div className="d-flex flex-column gap-2">
+                        <button className="btn btn-wine w-100 py-2 rounded-3" onClick={handleOpenChat} disabled={chatLoading}>
+                          {chatLoading ? "Opening..." : "Open Chat"}
+                        </button>
+                        {selectedBook && (
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary w-100 py-1 rounded-3"
+                            onClick={handleClearCurrentReading}
+                            style={{ fontSize: "0.8rem" }}
+                          >
+                            Clear current reading
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -883,6 +999,19 @@ export const Home = () => {
                             setSelectedEvent(ev);
                             setIsEventDetailsOpen(true);
                           }}
+                          style={{
+                            minWidth: "100px",
+                            width: "100px",
+                            height: "32px",
+                            flexShrink: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.875rem",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis"
+                          }}
                         >
                           View More
                         </button>
@@ -960,6 +1089,7 @@ export const Home = () => {
           }}
           books={libraryBooks}
           onSelect={handleBookSelect}
+          excludeIsbns={activeSlot !== null ? [top3[(activeSlot + 1) % 3]?.isbn, top3[(activeSlot + 2) % 3]?.isbn].filter(Boolean) : []}
         />
       </div>
     </div>

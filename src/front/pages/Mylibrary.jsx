@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from "react";
 import PixelCard from "../components/PixelCard";
+import useGlobalReducer from "../hooks/useGlobalReducer";
+import { useUser } from "../components/UserContext";
 import portadaLibro from "../assets/img/portada_Libro.png";
 
 const normalizeIsbn = (isbn) => (isbn || "").replaceAll("-", "").replaceAll(" ", "").toUpperCase();
 
 export const MyLibrary = () => {
   const API_BASE = import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, "") || "http://localhost:3001";
+  const { store, dispatch } = useGlobalReducer();
+  const { userData } = useUser();
   const [libraryBooks, setLibraryBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingIsbn, setDeletingIsbn] = useState(null);
 
-  const getUserId = () => {
-    const saved = JSON.parse(localStorage.getItem("user_data") || "null");
-    return saved?.id || null;
-  };
+  const getUserId = () => userData?.id ?? null;
 
   const getAuthors = (book) => {
     if (!book) return "";
@@ -50,10 +51,8 @@ export const MyLibrary = () => {
     try {
       const resp = await fetch(`${API_BASE}/api/library/${userId}/books/${clean}`, { method: "DELETE" });
       if (!resp.ok) throw new Error();
-      const saved = JSON.parse(localStorage.getItem("selected_book") || "null");
-      if (saved && normalizeIsbn(saved.isbn) === clean) {
-        localStorage.removeItem("selected_book");
-        window.dispatchEvent(new Event("local-storage-changed"));
+      if (store?.selectedBook && normalizeIsbn(store.selectedBook.isbn) === clean) {
+        dispatch({ type: "set_selected_book", payload: null });
       }
       setLibraryBooks((prev) => prev.filter((b) => normalizeIsbn(b.isbn) !== clean));
     } catch {
